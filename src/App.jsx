@@ -1,33 +1,61 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Plus, Trash2, Brain, CheckCircle, ChevronRight, ChevronLeft, Shuffle, Coffee, Sparkles, Loader2, Calendar as CalendarIcon, ArrowLeft, Pencil, X, Download, Upload } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Play, Pause, Plus, Trash2, Brain, CheckCircle, ChevronRight, ChevronLeft, Shuffle, Coffee, Sparkles, Loader2, Calendar as CalendarIcon, ArrowLeft, Pencil, X, Download, LogIn, LogOut, User, Cloud, CloudOff } from 'lucide-react';
 
-// --- Gemini API Configuration ---
-const apiKey = ""; // 系统会自动注入 API Key
+// --- Firebase Imports ---
+import { initializeApp } from "firebase/app";
+import { 
+  getAuth, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut, 
+  onAuthStateChanged,
+  signInAnonymously,
+  signInWithCustomToken
+} from "firebase/auth";
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  onSnapshot, 
+  collection 
+} from "firebase/firestore";
+
+// --- Configuration ---
+const apiKey = ""; // Gemini API Key (System Injected)
 const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
 
+// Initialize Firebase (Safely handle environment)
+const getFirebaseConfig = () => {
+  try {
+    // __firebase_config is injected by the preview environment
+    return typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+  } catch (e) {
+    return {};
+  }
+};
+
+const firebaseConfig = getFirebaseConfig();
+const app = Object.keys(firebaseConfig).length > 0 ? initializeApp(firebaseConfig) : null;
+const auth = app ? getAuth(app) : null;
+const db = app ? getFirestore(app) : null;
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+// --- Gemini API ---
 const callGemini = async (prompt, systemInstruction = "") => {
   try {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           systemInstruction: { parts: [{ text: systemInstruction }] },
-          generationConfig: {
-            responseMimeType: "application/json" 
-          }
+          generationConfig: { responseMimeType: "application/json" }
         }),
       }
     );
-
-    if (!response.ok) {
-      throw new Error(`API call failed: ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(`API call failed: ${response.status}`);
     const data = await response.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text;
   } catch (error) {
@@ -36,14 +64,13 @@ const callGemini = async (prompt, systemInstruction = "") => {
   }
 };
 
-// 初始默认任务
 const INITIAL_TASKS = [
   { id: 1, title: 'LeetCode 算法刷题', goalMinutes: 60, completedMinutes: 0, color: 'bg-blue-500' },
   { id: 2, title: '系统设计学习', goalMinutes: 45, completedMinutes: 0, color: 'bg-indigo-500' },
   { id: 3, title: '英语口语练习', goalMinutes: 30, completedMinutes: 0, color: 'bg-emerald-500' },
 ];
 
-// --- Sub-Component: Particle Canvas (Hero Section) ---
+// --- Sub-Component: Focus Hero ---
 const FocusParticleCanvas = ({ progress }) => {
     const canvasRef = useRef(null);
     const warmGoldHex = '#F59E0B'; 
@@ -82,7 +109,6 @@ const FocusParticleCanvas = ({ progress }) => {
                 const speed = Math.random() * 1.5 + 0.2 + (progress * 1.5); 
                 this.vx = (centerX - this.x) * 0.0008 * speed;
                 this.vy = (centerY - this.y) * 0.0008 * speed;
-                
                 this.size = Math.random() * 2.5;
                 this.life = 0;
                 this.maxLife = 300 + Math.random() * 100;
@@ -93,20 +119,11 @@ const FocusParticleCanvas = ({ progress }) => {
                 this.x += this.vx;
                 this.y += this.vy;
                 this.life++;
-
                 if (this.life < 80) this.alpha = this.life / 80;
                 else this.alpha = 1 - (this.life - 80) / (this.maxLife - 80);
-
                 this.vx *= 1.005;
                 this.vy *= 1.005;
-
-                const dx = centerX - this.x;
-                const dy = centerY - this.y;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                
-                if (dist < 15 || this.life > this.maxLife) {
-                    this.reset();
-                }
+                if (Math.sqrt((centerX - this.x)**2 + (centerY - this.y)**2) < 15 || this.life > this.maxLife) this.reset();
             }
 
             draw() {
@@ -119,12 +136,9 @@ const FocusParticleCanvas = ({ progress }) => {
         }
 
         const particleCount = 60 + Math.floor(progress * 120);
-        for (let i = 0; i < particleCount; i++) {
-            particles.push(new Particle());
-        }
+        for (let i = 0; i < particleCount; i++) particles.push(new Particle());
 
         let time = 0;
-
         const render = () => {
             time++;
             ctx.fillStyle = 'rgba(0, 0, 0, 0.08)'; 
@@ -156,9 +170,7 @@ const FocusParticleCanvas = ({ progress }) => {
             ctx.globalCompositeOperation = 'source-over';
             animationFrameId = requestAnimationFrame(render);
         };
-
         render();
-
         return () => {
             window.removeEventListener('resize', resize);
             cancelAnimationFrame(animationFrameId);
@@ -168,17 +180,10 @@ const FocusParticleCanvas = ({ progress }) => {
     return <canvas ref={canvasRef} className="absolute inset-0 z-0" />;
 };
 
-
 // --- Sub-Component: Edit Modal ---
 const EditTaskModal = ({ task, onClose, onSave }) => {
     const [title, setTitle] = useState(task.title);
     const [minutes, setMinutes] = useState(task.goalMinutes);
-
-    const handleSave = () => {
-        onSave(task.id, title, parseInt(minutes));
-        onClose();
-    };
-
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6 space-y-4">
@@ -186,33 +191,20 @@ const EditTaskModal = ({ task, onClose, onSave }) => {
                     <h3 className="text-xl font-bold text-gray-900">调整计划</h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
                 </div>
-                
                 <div>
                     <label className="block text-sm font-medium text-gray-500 mb-1">任务名称</label>
-                    <input 
-                        type="text" 
-                        value={title} 
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="w-full text-lg font-bold border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent"
-                    />
+                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full text-lg font-bold border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent"/>
                 </div>
-
                 <div>
                     <label className="block text-sm font-medium text-gray-500 mb-1">每日目标 (分钟)</label>
                     <div className="flex items-center gap-4">
-                        <input 
-                            type="number" 
-                            value={minutes} 
-                            onChange={(e) => setMinutes(e.target.value)}
-                            className="w-24 text-3xl font-mono font-bold text-indigo-600 border-b-2 border-gray-200 focus:border-indigo-600 outline-none py-1 bg-transparent"
-                        />
+                        <input type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-24 text-3xl font-mono font-bold text-indigo-600 border-b-2 border-gray-200 focus:border-indigo-600 outline-none py-1 bg-transparent"/>
                         <span className="text-gray-400">min</span>
                     </div>
                 </div>
-
                 <div className="pt-4 flex gap-3">
                     <button onClick={onClose} className="flex-1 py-3 text-gray-500 font-medium hover:bg-gray-50 rounded-xl transition-colors">取消</button>
-                    <button onClick={handleSave} className="flex-1 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">保存修改</button>
+                    <button onClick={() => { onSave(task.id, title, parseInt(minutes)); onClose(); }} className="flex-1 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">保存修改</button>
                 </div>
             </div>
         </div>
@@ -224,33 +216,19 @@ const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit }) => {
     const [offsetX, setOffsetX] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const startX = useRef(0);
-    
     const SNAP_THRESHOLD = -40;
     const MAX_SWIPE = -80;
 
-    const onTouchStart = (e) => {
-        startX.current = e.touches[0].clientX;
-        setIsDragging(true);
-    };
-
+    const onTouchStart = (e) => { startX.current = e.touches[0].clientX; setIsDragging(true); };
     const onTouchMove = (e) => {
         if (!isDragging) return;
-        const touchX = e.touches[0].clientX;
-        const diff = touchX - startX.current;
-        if (diff < 0 && diff > -120) {
-            setOffsetX(diff);
-        } else if (diff > 0 && offsetX < 0) {
-            setOffsetX(Math.min(0, MAX_SWIPE + diff));
-        }
+        const diff = e.touches[0].clientX - startX.current;
+        if (diff < 0 && diff > -120) setOffsetX(diff);
+        else if (diff > 0 && offsetX < 0) setOffsetX(Math.min(0, MAX_SWIPE + diff));
     };
-
     const onTouchEnd = () => {
         setIsDragging(false);
-        if (offsetX < SNAP_THRESHOLD) {
-            setOffsetX(MAX_SWIPE); 
-        } else {
-            setOffsetX(0); 
-        }
+        setOffsetX(offsetX < SNAP_THRESHOLD ? MAX_SWIPE : 0);
     };
 
     const progress = Math.min((task.completedMinutes / task.goalMinutes) * 100, 100);
@@ -258,58 +236,31 @@ const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit }) => {
 
     return (
         <div className="relative w-full mb-4 select-none overflow-hidden rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            {/* Delete Background */}
             <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-6 rounded-2xl">
                 <Trash2 className="text-white animate-pulse" size={24} />
             </div>
-
-            {/* Main Card */}
             <div 
                 className="absolute inset-0 bg-white rounded-2xl border border-gray-100 flex flex-col justify-between transition-transform duration-300 ease-out will-change-transform z-10"
-                style={{ 
-                    transform: `translateX(${offsetX}px)`,
-                    transition: isDragging ? 'none' : 'transform 0.3s ease-out'
-                }}
-                onTouchStart={onTouchStart}
-                onTouchMove={onTouchMove}
-                onTouchEnd={onTouchEnd}
-                onClick={() => {
-                    if (offsetX < -10) setOffsetX(0);
-                    else onClick(task.id);
-                }}
+                style={{ transform: `translateX(${offsetX}px)`, transition: isDragging ? 'none' : 'transform 0.3s ease-out' }}
+                onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
+                onClick={() => offsetX < -10 ? setOffsetX(0) : onClick(task.id)}
             >
                 <div className="flex justify-between items-center p-5 h-full relative z-20">
                     <div className="flex-1 pr-4">
                         <div className="flex items-center gap-2">
                             <h3 className={`font-bold text-lg ${isDone ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{task.title}</h3>
-                            <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1 text-gray-300 hover:text-indigo-600 transition-colors">
-                                <Pencil size={14} />
-                            </button>
-                        </div>
-                        {/* 进度显示：如果不需要显示具体时间，可以注释掉下面这行，或者保留作为参考 */}
-                        <div className="flex items-center gap-2 text-xs text-gray-400 mt-1 font-mono">
-                           {isDone ? 'COMPLETED' : `${Math.round(task.completedMinutes)} / ${task.goalMinutes} min`}
+                            <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1 text-gray-300 hover:text-indigo-600 transition-colors"><Pencil size={14} /></button>
                         </div>
                     </div>
-                    
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md ${task.color} text-white shrink-0`}>
                         <Play fill="currentColor" size={16} className="ml-0.5" />
                     </div>
                 </div>
-
-                {/* Bottom Green Progress Bar (The new requirement) */}
                 <div className="absolute bottom-0 left-0 h-1.5 bg-gray-100 w-full overflow-hidden rounded-b-2xl">
-                    <div 
-                        className="h-full bg-green-500 transition-all duration-500 ease-out" 
-                        style={{ width: `${progress}%` }} 
-                    />
+                    <div className="h-full bg-green-500 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
                 </div>
             </div>
-
-            {/* Spacer for layout since children are absolute */}
             <div className="h-24"></div>
-
-            {/* Clickable area for delete */}
             {offsetX === MAX_SWIPE && (
                  <button onClick={(e) => { e.stopPropagation(); onDelete(task.id); }} className="absolute top-0 right-0 bottom-0 w-20 cursor-pointer z-10" />
             )}
@@ -317,53 +268,144 @@ const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit }) => {
     );
 };
 
-
 export default function JumpStart() {
-  // --- State ---
-  const [tasks, setTasks] = useState(() => {
-    try {
-        const saved = localStorage.getItem('jumpstart_tasks');
-        return saved ? JSON.parse(saved) : INITIAL_TASKS;
-    } catch(e) { return INITIAL_TASKS; }
-  });
+  // --- Data State ---
+  const [tasks, setTasks] = useState(INITIAL_TASKS);
+  const [history, setHistory] = useState({});
+  const [user, setUser] = useState(null);
+  const [syncStatus, setSyncStatus] = useState('offline'); // 'offline' | 'synced' | 'saving'
 
-  const [history, setHistory] = useState(() => {
-    try {
-        const saved = localStorage.getItem('jumpstart_history');
-        return saved ? JSON.parse(saved) : {};
-    } catch(e) { return {}; }
-  });
-
+  // --- UI State ---
   const [activeTaskId, setActiveTaskId] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [viewMode, setViewMode] = useState('dashboard');
   const [editingTask, setEditingTask] = useState(null);
-
-  // AI State
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
-  const [aiMessage, setAiMessage] = useState("点击这里，让 AI 基于你的当前进度给出建议...");
+  const [aiMessage, setAiMessage] = useState("登录后，数据将自动同步到云端...");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
-
   const [showSummary, setShowSummary] = useState(false);
   const [lastSessionTime, setLastSessionTime] = useState(0);
-
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
 
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
 
-  // --- Persistence Effects ---
-  // Ensure data saves even if browser closes abruptly
+  // --- 1. Auth & Initial Load ---
   useEffect(() => {
-    localStorage.setItem('jumpstart_tasks', JSON.stringify(tasks));
-  }, [tasks]);
+    if (!auth) return;
 
+    // Handle initial auth for preview environment (System requirement)
+    const initAuth = async () => {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        // Fallback for demo if no google account linked yet
+        await signInAnonymously(auth); 
+      }
+    };
+    initAuth();
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+          setSyncStatus('synced');
+          if (currentUser.isAnonymous) {
+              setAiMessage("当前为访客模式，数据仅保存在此设备。点击右上角登录以永久保存。");
+          } else {
+              setAiMessage(`欢迎回来，${currentUser.displayName || '奋斗者'}。数据已同步。`);
+          }
+      } else {
+          setSyncStatus('offline');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // --- 2. Data Sync (Firestore Listener) ---
   useEffect(() => {
-    localStorage.setItem('jumpstart_history', JSON.stringify(history));
-  }, [history]);
+    if (!user || !db) {
+        // Fallback to local storage if offline/no firebase
+        const savedTasks = localStorage.getItem('jumpstart_tasks');
+        const savedHistory = localStorage.getItem('jumpstart_history');
+        if (savedTasks) setTasks(JSON.parse(savedTasks));
+        if (savedHistory) setHistory(JSON.parse(savedHistory));
+        return;
+    }
 
+    // Real-time listener from Firestore
+    const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
+    const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            // Merge strategy: Server wins. 
+            // In a real app, you might want more complex merging.
+            if (data.tasks) setTasks(data.tasks);
+            if (data.history) setHistory(data.history);
+        } else {
+            // New user on cloud, maybe upload local data?
+            // For now, we just keep initial state or local state.
+        }
+    }, (error) => {
+        console.error("Sync error:", error);
+        setSyncStatus('offline');
+    });
+
+    return () => unsubscribeSnapshot();
+  }, [user]);
+
+  // --- 3. Save Logic (Debounced Write) ---
+  const saveDataToCloud = useCallback(async (newTasks, newHistory) => {
+      if (!user || !db) {
+          // Fallback Local Save
+          localStorage.setItem('jumpstart_tasks', JSON.stringify(newTasks));
+          localStorage.setItem('jumpstart_history', JSON.stringify(newHistory));
+          return;
+      }
+
+      setSyncStatus('saving');
+      try {
+        const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
+        await setDoc(userDocRef, {
+            tasks: newTasks,
+            history: newHistory,
+            lastUpdated: new Date().toISOString()
+        }, { merge: true });
+        setSyncStatus('synced');
+      } catch (e) {
+        console.error("Save failed", e);
+        setSyncStatus('offline');
+      }
+  }, [user]);
+
+  // --- Login / Logout Handlers ---
+  const handleGoogleLogin = async () => {
+      if (!auth) return;
+      try {
+          const provider = new GoogleAuthProvider();
+          await signInWithPopup(auth, provider);
+          // onAuthStateChanged will handle the rest
+      } catch (error) {
+          console.error("Login failed", error);
+          alert("登录失败: " + error.message + "\n(注意：在预览环境中，Google登录可能因域名限制无法弹出。部署后即可正常使用。)");
+      }
+  };
+
+  const handleLogout = async () => {
+      if (!auth) return;
+      try {
+          await signOut(auth);
+          // Optionally revert to anonymous?
+          // For simplicity, we just sign out.
+          setTasks(INITIAL_TASKS);
+          setHistory({});
+      } catch (error) {
+          console.error("Logout error", error);
+      }
+  };
+
+  // --- Timer Logic ---
   useEffect(() => {
     if (activeTaskId) {
       startTimeRef.current = Date.now() - (timerSeconds * 1000);
@@ -381,26 +423,18 @@ export default function JumpStart() {
     if (isAiLoading) return;
     setIsAiPanelOpen(true);
     setIsAiLoading(true);
-    setAiMessage("正在分析你的学习数据...");
+    setAiMessage("AI 正在分析您的云端数据...");
 
     const prompt = JSON.stringify({
-      currentTasks: tasks.map(t => ({
-        title: t.title,
-        goal: t.goalMinutes,
-        done: Math.round(t.completedMinutes)
-      })),
+      currentTasks: tasks.map(t => ({ title: t.title, goal: t.goalMinutes, done: Math.round(t.completedMinutes) })),
       currentTime: new Date().toLocaleTimeString()
     });
-
-    const systemPrompt = `你是一个严格但幽默的职场教练。用户正在为跳槽做准备。
-    请根据用户的任务列表和进度，给出一条简短、有力、具体的建议（20-40字）。
-    如果用户进度落后，督促他。如果做得好，夸奖他。
-    请用 JSON 格式返回: { "advice": "你的建议内容" }`;
-
+    const systemPrompt = `你是一个严格但幽默的职场教练。用户正在为跳槽做准备。请根据用户的任务列表和进度，给出一条简短、有力、具体的建议（20-40字）。`;
+    
     const result = await callGemini(prompt, systemPrompt);
     if (result) {
-      try { const parsed = JSON.parse(result); setAiMessage(parsed.advice); } 
-      catch (e) { setAiMessage("AI 似乎在思考人生，请重试..."); }
+        try { const parsed = JSON.parse(result); setAiMessage(parsed.advice); } 
+        catch (e) { setAiMessage(result.substring(0, 100)); } // Fallback if not JSON
     } else { setAiMessage("网络开小差了，建议你先做个简单的任务。"); }
     setIsAiLoading(false);
   };
@@ -408,10 +442,8 @@ export default function JumpStart() {
   const generateSmartPlan = async () => {
     if (!newTaskTitle.trim()) return;
     setIsGeneratingPlan(true);
-
     const systemPrompt = `Project Manager AI. Break down goal into 2-4 tasks. Return JSON Array: [{ "title": "xx", "minutes": 30, "color": "bg-blue-500" }]`;
-    const prompt = `Goal: "${newTaskTitle}"`;
-    const result = await callGemini(prompt, systemPrompt);
+    const result = await callGemini(`Goal: "${newTaskTitle}"`, systemPrompt);
 
     if (result) {
       try {
@@ -424,7 +456,9 @@ export default function JumpStart() {
                 completedMinutes: 0,
                 color: item.color || 'bg-slate-500'
             }));
-            setTasks(prev => [...prev, ...createdTasks]);
+            const updatedTasks = [...tasks, ...createdTasks];
+            setTasks(updatedTasks);
+            saveDataToCloud(updatedTasks, history); // Save immediately
             setNewTaskTitle('');
             setIsAddingTask(false);
         }
@@ -447,7 +481,7 @@ export default function JumpStart() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   };
 
-  // --- Handlers ---
+  // --- Core Logic ---
   const handleTaskClick = (taskId) => {
       if (activeTaskId === taskId) {
           const sessionSecs = timerSeconds;
@@ -466,43 +500,44 @@ export default function JumpStart() {
     if (seconds < 5) return;
     const minutesToAdd = seconds / 60;
     
-    // 1. Update Current Progress (Accumulated)
-    setTasks(prev => prev.map(t => {
+    // 1. Calculate new state
+    const newTasks = tasks.map(t => {
       if (t.id === taskId) return { ...t, completedMinutes: t.completedMinutes + minutesToAdd };
       return t;
-    }));
+    });
 
-    // 2. Update History (For Calendar)
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
     const today = getTodayString();
     
-    setHistory(prev => {
-        const dayRecords = prev[today] || [];
-        return {
-            ...prev,
-            [today]: [...dayRecords, {
-                taskId,
-                title: task.title,
-                minutes: minutesToAdd,
-                timestamp: Date.now(),
-                color: task.color
-            }]
-        };
-    });
+    const dayRecords = history[today] || [];
+    const newHistory = {
+        ...history,
+        [today]: [...dayRecords, {
+            taskId,
+            title: task.title,
+            minutes: minutesToAdd,
+            timestamp: Date.now(),
+            color: task.color
+        }]
+    };
+
+    // 2. Set State
+    setTasks(newTasks);
+    setHistory(newHistory);
+
+    // 3. Persist
+    saveDataToCloud(newTasks, newHistory);
   };
 
   const handleUpdateTask = (id, newTitle, newMinutes) => {
-      setTasks(prev => prev.map(t => {
+      const newTasks = tasks.map(t => {
           if (t.id === id) return { ...t, title: newTitle, goalMinutes: newMinutes };
           return t;
-      }));
+      });
+      setTasks(newTasks);
+      saveDataToCloud(newTasks, history);
       setEditingTask(null);
-  };
-
-  const handleSummaryConfirm = () => {
-    setShowSummary(false);
-    setTimerSeconds(0);
   };
 
   const addNewTask = () => {
@@ -514,15 +549,21 @@ export default function JumpStart() {
       completedMinutes: 0,
       color: 'bg-slate-500'
     };
-    setTasks([...tasks, newTask]);
+    const newTasks = [...tasks, newTask];
+    setTasks(newTasks);
+    saveDataToCloud(newTasks, history);
     setNewTaskTitle('');
     setIsAddingTask(false);
   };
 
   const deleteTask = (id) => {
-    if (confirm('确定要放弃这个提升计划吗？')) setTasks(tasks.filter(t => t.id !== id));
+    if (confirm('确定要放弃这个提升计划吗？')) {
+        const newTasks = tasks.filter(t => t.id !== id);
+        setTasks(newTasks);
+        saveDataToCloud(newTasks, history);
+    }
   };
-  
+
   const exportData = () => {
       const dataStr = JSON.stringify({ tasks, history }, null, 2);
       const blob = new Blob([dataStr], { type: "application/json" });
@@ -559,7 +600,6 @@ export default function JumpStart() {
       const selectedDayData = history[selectedDate] || [];
       const totalMinutesSelected = selectedDayData.reduce((acc, curr) => acc + curr.minutes, 0);
 
-      // Aggregate for clean display
       const aggregated = selectedDayData.reduce((acc, curr) => {
           if (!acc[curr.title]) acc[curr.title] = { minutes: 0, color: curr.color };
           acc[curr.title].minutes += curr.minutes;
@@ -647,7 +687,6 @@ export default function JumpStart() {
   };
 
   // --- Render ---
-
   // 1. Focus Mode
   if (activeTaskId) {
     const activeTask = tasks.find(t => t.id === activeTaskId);
@@ -693,22 +732,45 @@ export default function JumpStart() {
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex justify-center">
       {editingTask && <EditTaskModal task={editingTask} onClose={() => setEditingTask(null)} onSave={handleUpdateTask} />}
       
-      {/* Container to restrict max width on desktop but full on mobile */}
       <div className="w-full max-w-lg bg-white min-h-screen shadow-xl border-x border-gray-100 relative">
-        
-        {/* Header */}
-        <header className={`px-6 pt-12 pb-6 bg-white sticky top-0 z-30 transition-transform duration-300 ${viewMode === 'calendar' ? '-translate-y-full absolute opacity-0' : 'translate-y-0 opacity-100'}`}>
+        <header 
+            className={`
+                px-6 pt-12 pb-6 bg-white z-30 transition-all duration-300
+                ${viewMode === 'calendar' ? 'absolute -translate-y-full opacity-0 pointer-events-none' : 'sticky top-0 translate-y-0 opacity-100'}
+            `}
+        >
             <div className="flex justify-between items-center mb-2">
                 <div>
                     <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">JumpStart <span className="text-blue-600">.</span></h1>
-                    <p className="text-sm text-gray-500">科学跳槽备战助手</p>
+                    <div className="flex items-center gap-2 mt-1">
+                        {user && !user.isAnonymous ? (
+                             <span className="flex items-center gap-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                                <Cloud size={10} /> 已同步
+                             </span>
+                        ) : (
+                             <span className="flex items-center gap-1 text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                <User size={10} /> 访客
+                             </span>
+                        )}
+                        {syncStatus === 'saving' && <span className="text-xs text-gray-400 animate-pulse">保存中...</span>}
+                    </div>
                 </div>
-                <button onClick={() => setViewMode('calendar')} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors tooltip" title="查看历史记录">
-                    <CalendarIcon size={20} className="text-gray-600" />
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={() => setViewMode('calendar')} className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors tooltip" title="历史记录">
+                        <CalendarIcon size={20} className="text-gray-600" />
+                    </button>
+                    {user && !user.isAnonymous ? (
+                        <button onClick={handleLogout} className="p-2 bg-red-50 hover:bg-red-100 rounded-full transition-colors text-red-500" title="登出">
+                            <LogOut size={20} />
+                        </button>
+                    ) : (
+                        <button onClick={handleGoogleLogin} className="p-2 bg-blue-50 hover:bg-blue-100 rounded-full transition-colors text-blue-600" title="Google 登录">
+                            <LogIn size={20} />
+                        </button>
+                    )}
+                </div>
             </div>
             
-            {/* AI Insight */}
             <div onClick={handleAiAdvice} className={`mt-4 p-4 rounded-xl cursor-pointer transition-all duration-300 border ${isAiPanelOpen ? 'bg-indigo-600 text-white shadow-lg scale-[1.02]' : 'bg-indigo-50 border-indigo-100 text-indigo-900 hover:bg-indigo-100'}`}>
                 <div className="flex items-start gap-3">
                     {isAiLoading ? <Loader2 size={20} className="mt-1 animate-spin" /> : <Brain size={20} className={`mt-1 ${isAiPanelOpen ? 'text-white' : 'text-indigo-600'}`} />}
@@ -720,14 +782,12 @@ export default function JumpStart() {
             </div>
         </header>
 
-        {/* Content */}
-        <main className="px-6 py-4 pb-24">
+        <main className={`px-6 py-4 pb-24 ${viewMode === 'calendar' ? 'pt-14' : ''}`}>
             {viewMode === 'dashboard' ? (
                 <div className="space-y-4 animate-fade-in">
                     {tasks.map(task => (
                         <SwipeableTaskItem key={task.id} task={task} onClick={handleTaskClick} onEdit={setEditingTask} onDelete={deleteTask} />
                     ))}
-
                     {isAddingTask ? (
                         <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-4 animate-fade-in">
                             <input autoFocus type="text" placeholder="例如: 准备面试..." className="w-full bg-transparent outline-none text-lg mb-4 text-gray-800 placeholder-gray-400" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} />
@@ -748,13 +808,10 @@ export default function JumpStart() {
                     )}
                 </div>
             ) : (
-                <div className="pt-2">
-                    <CalendarView />
-                </div>
+                <CalendarView />
             )}
         </main>
 
-        {/* Footer Actions */}
         {viewMode === 'dashboard' && (
             <div className="absolute bottom-6 left-0 right-0 flex justify-center px-6 pointer-events-none">
                 <div className="bg-white/90 backdrop-blur-md shadow-xl border border-gray-200 p-2 rounded-full pointer-events-auto flex gap-2">
