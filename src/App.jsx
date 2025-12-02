@@ -20,13 +20,19 @@ import {
   collection 
 } from "firebase/firestore";
 
-// --- 🔥 LLM Configuration---
+// --- 🔥 LLM Configuration (未来对接 Mac Mini) ---
 const AI_CONFIG = {
+    // 当你回家连上 Mac Mini 后，把这里设为 false
     useMockData: true, 
+    
+    // 你的 Mac Mini 本地服务地址 (以 Ollama 为例)
+    // 注意：如果是手机访问，这里不能填 localhost，要填 Mac Mini 的局域网 IP (如 192.168.1.5)
     baseUrl: "http://localhost:11434/v1/chat/completions", 
-    model: "llama3" 
+    
+    model: "llama3" // 或者 "mistral", "gemma" 等
 };
 
+// --- Firebase Config (保持你的配置) ---
 const YOUR_FIREBASE_CONFIG = {
   apiKey: "AIzaSyCXowQfMj1aU6SF_sYvRAvHItr_4EDAu7E",
   authDomain: "juststart-e864a.firebaseapp.com",
@@ -70,14 +76,17 @@ const callLocalLLM = async (systemPrompt, userPrompt, jsonMode = false) => {
               ]
           });
       }
+      // 针对 "Daily Coach" 的模拟返回
       return JSON.stringify({ advice: "Mock建议：回家记得打开 Mac Mini，真正的 Llama 正在等你唤醒！保持专注！" });
   }
 
+  // 2. Real Local Call (适配 OpenAI API 格式，Ollama/LMStudio 通用)
   try {
     const response = await fetch(AI_CONFIG.baseUrl, {
       method: 'POST',
       headers: { 
           'Content-Type': 'application/json',
+          // 'Authorization': 'Bearer sk-xxx' // 如果你需要鉴权
       },
       body: JSON.stringify({
         model: AI_CONFIG.model,
@@ -86,7 +95,7 @@ const callLocalLLM = async (systemPrompt, userPrompt, jsonMode = false) => {
             { role: "user", content: userPrompt }
         ],
         temperature: 0.7,
-        response_format: jsonMode ? { type: "json_object" } : undefined 
+        response_format: jsonMode ? { type: "json_object" } : undefined // Llama 3 支持 JSON 模式
       }),
     });
 
@@ -276,32 +285,54 @@ export default function JumpStart() {
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
 
-  // --- 1. Auth & Initial Load ---
+  // --- 1. Auth & Initial Load (优化：静默处理预览环境错误) ---
   useEffect(() => {
     if (!auth) return;
+
     const initAuth = async () => {
       try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-        else await signInAnonymously(auth); 
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+            // 尝试匿名登录，如果失败（例如预览环境域名限制），则捕获错误并进入离线模式
+            await signInAnonymously(auth); 
+        }
       } catch (e) {
-        console.warn("Auth disabled in preview or failed. Running offline.", e);
+        // 检测是否为预览环境常见的 referrer 错误
+        const isPreviewError = e.message && (e.message.includes('auth/requests-from-referer') || e.code === 'auth/requests-from-referer-blocked');
+        if (isPreviewError) {
+            console.log("预览环境检测：Firebase 认证受限，已自动切换至离线模式。");
+            // 可以在这里设置一个状态，告诉 UI "当前处于离线预览模式"
+        } else {
+            console.warn("Auth initialization failed:", e);
+        }
         setSyncStatus('offline');
       }
     };
-    initAuth();
+
+    // 监听 Auth 状态变化
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
       if (currentUser) {
-          setSyncStatus('synced');
-          if (currentUser.isAnonymous) setAiMessage("访客模式 | 本地 AI 就绪");
-          else setAiMessage(`欢迎, ${currentUser.displayName || 'Engineer'}。`);
-      } else setSyncStatus('offline');
+        setUser(currentUser);
+        setSyncStatus('synced');
+        if (currentUser.isAnonymous) setAiMessage("访客模式 | 本地 AI 就绪");
+        else setAiMessage(`欢迎, ${currentUser.displayName || 'Engineer'}。`);
+      } else {
+        // 如果没有用户（且上面的 initAuth 失败了），就保持 offline 状态
+        // 这里的 else 分支不强制重试登录，避免死循环
+        if (syncStatus !== 'offline') setSyncStatus('offline');
+      }
     });
+
+    // 启动认证尝试
+    initAuth();
+
     return () => unsubscribe();
   }, []);
 
   // --- 2. Data Sync ---
   useEffect(() => {
+    // 如果没有用户或数据库未连接，从本地加载
     if (!user || !db) {
         const savedTasks = localStorage.getItem('jumpstart_tasks');
         const savedHistory = localStorage.getItem('jumpstart_history');
@@ -313,6 +344,7 @@ export default function JumpStart() {
         if (savedHistory) setHistory(JSON.parse(savedHistory));
         return;
     }
+    // 否则从 Firestore 实时同步
     const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
     const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -320,23 +352,34 @@ export default function JumpStart() {
             if (data.tasks) setTasks(data.tasks);
             if (data.history) setHistory(data.history);
         }
+    }, (error) => {
+        // 如果权限不足或离线，回退
+        console.warn("Sync disconnected, falling back to offline.", error.code);
+        setSyncStatus('offline');
     });
     return () => unsubscribeSnapshot();
   }, [user]);
 
   // --- 3. Save Logic ---
   const saveDataToCloud = useCallback(async (newTasks, newHistory) => {
-      if (!user || !db) {
-          localStorage.setItem('jumpstart_tasks', JSON.stringify(newTasks));
-          localStorage.setItem('jumpstart_history', JSON.stringify(newHistory));
-          return;
-      }
+      // 总是先存本地，保证极速响应
+      localStorage.setItem('jumpstart_tasks', JSON.stringify(newTasks));
+      localStorage.setItem('jumpstart_history', JSON.stringify(newHistory));
+
+      if (!user || !db) return; // 离线模式到此为止
+
       setSyncStatus('saving');
       try {
         const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
         await setDoc(userDocRef, { tasks: newTasks, history: newHistory, lastUpdated: new Date().toISOString() }, { merge: true });
         setSyncStatus('synced');
-      } catch (e) { console.error("Save failed", e); setSyncStatus('offline'); }
+      } catch (e) { 
+          // 忽略预览环境的权限错误
+          if (e.code !== 'permission-denied' && !e.message.includes('referer')) {
+            console.error("Cloud save failed", e);
+          }
+          setSyncStatus('offline'); 
+      }
   }, [user]);
 
   // --- Handlers ---
