@@ -185,6 +185,142 @@ const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit, hideTitle }) => {
     );
 };
 
+// --- 🔥 Heatmap Calendar Component ---
+const CalendarView = ({ history, exportData }) => {
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
+
+    const changeMonth = (delta) => setCurrentDate(new Date(year, month + delta, 1));
+
+    // Get color intensity based on minutes
+    const getIntensityClass = (minutes) => {
+        if (!minutes || minutes === 0) return 'bg-gray-50 text-gray-400';
+        if (minutes < 30) return 'bg-emerald-100 text-emerald-800'; // Lite
+        if (minutes < 60) return 'bg-emerald-300 text-emerald-900'; // Medium
+        if (minutes < 120) return 'bg-emerald-500 text-white font-bold'; // Heavy
+        return 'bg-emerald-700 text-white font-bold'; // Intense
+    };
+
+    // Calculate details for the selected date
+    const selectedDayData = history[selectedDate] || [];
+    const totalMinutes = selectedDayData.reduce((acc, curr) => acc + curr.minutes, 0);
+    
+    // Aggregate tasks for the list below
+    const aggregated = selectedDayData.reduce((acc, curr) => {
+        if (!acc[curr.title]) acc[curr.title] = { minutes: 0, color: curr.color };
+        acc[curr.title].minutes += curr.minutes;
+        return acc;
+    }, {});
+
+    return (
+        <div className="animate-fade-in pb-20">
+            {/* Header & Export */}
+            <div className="flex justify-between items-center mb-6 px-2">
+                <h2 className="text-xl font-bold text-gray-900">专注热力图</h2>
+                <button 
+                    onClick={exportData} 
+                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
+                >
+                    <Download size={14} /> 备份数据
+                </button>
+            </div>
+
+            {/* Calendar Grid Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
+                {/* Month Navigation */}
+                <div className="flex justify-between items-center mb-4 px-1">
+                    <button onClick={() => changeMonth(-1)} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500"><ChevronLeft size={20}/></button>
+                    <h3 className="font-bold text-base text-gray-800">{year}年 {month + 1}月</h3>
+                    <button onClick={() => changeMonth(1)} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500"><ChevronRight size={20}/></button>
+                </div>
+
+                {/* Weekday Headers */}
+                <div className="grid grid-cols-7 gap-1 text-center mb-1">
+                    {['日', '一', '二', '三', '四', '五', '六'].map(d => (
+                        <div key={d} className="text-[10px] font-bold text-gray-400 uppercase py-2">{d}</div>
+                    ))}
+                </div>
+
+                {/* Days Grid */}
+                <div className="grid grid-cols-7 gap-1.5">
+                    {/* Empty slots for previous month */}
+                    {Array(firstDay).fill(null).map((_, i) => <div key={`empty-${i}`} />)}
+                    
+                    {/* Actual Days */}
+                    {[...Array(daysInMonth).keys()].map(i => {
+                        const day = i + 1;
+                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const dayMins = (history[dateStr] || []).reduce((a, c) => a + c.minutes, 0);
+                        const isSelected = dateStr === selectedDate;
+                        const colorClass = getIntensityClass(dayMins);
+
+                        return (
+                            <div 
+                                key={day} 
+                                onClick={() => setSelectedDate(dateStr)}
+                                className={`
+                                    aspect-square flex items-center justify-center rounded-lg text-xs cursor-pointer transition-all duration-200
+                                    ${colorClass}
+                                    ${isSelected ? 'ring-2 ring-black ring-offset-1 scale-105 shadow-md z-10' : 'hover:opacity-80'}
+                                `}
+                            >
+                                {day}
+                            </div>
+                        )
+                    })}
+                </div>
+                
+                {/* Legend */}
+                <div className="flex items-center justify-end gap-2 mt-4 text-[10px] text-gray-400 font-medium">
+                    <span>Less</span>
+                    <div className="w-3 h-3 rounded bg-emerald-100"></div>
+                    <div className="w-3 h-3 rounded bg-emerald-300"></div>
+                    <div className="w-3 h-3 rounded bg-emerald-500"></div>
+                    <div className="w-3 h-3 rounded bg-emerald-700"></div>
+                    <span>More</span>
+                </div>
+            </div>
+
+            {/* Selected Day Details */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <div className="flex justify-between items-end mb-4 border-b border-gray-100 pb-3">
+                    <div>
+                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-0.5">{selectedDate}</p>
+                        <h3 className="text-2xl font-bold text-gray-900">
+                            {Math.round(totalMinutes)} <span className="text-sm font-normal text-gray-500">分钟</span>
+                        </h3>
+                    </div>
+                    {totalMinutes > 0 && <div className="p-2 bg-emerald-50 text-emerald-600 rounded-full"><Sparkles size={18} /></div>}
+                </div>
+
+                <div className="space-y-3">
+                    {Object.keys(aggregated).length === 0 ? (
+                        <div className="text-center py-6 text-gray-400 text-sm">
+                            <Coffee size={24} className="mx-auto mb-2 opacity-50"/>
+                            这一天没有记录，注意休息哦。
+                        </div>
+                    ) : (
+                        Object.entries(aggregated).map(([title, data]) => (
+                            <div key={title} className="flex items-center justify-between group">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-2.5 h-2.5 rounded-full ${data.color}`}></div>
+                                    <span className="text-sm font-medium text-gray-700 group-hover:text-black transition-colors">{title}</span>
+                                </div>
+                                <span className="text-sm font-mono font-bold text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{Math.round(data.minutes)}m</span>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function JumpStart() {
   // --- Data State ---
   const [tasks, setTasks] = useState(INITIAL_TASKS);
@@ -281,10 +417,8 @@ export default function JumpStart() {
     return () => clearInterval(timerRef.current);
   }, [activeTaskId]);
 
-  // --- 🔥 Safe Task Stop Logic ---
   const handleTaskClick = (taskId) => {
       if (activeTaskId === taskId) {
-          // Stop logic
           try {
               const minutesToAdd = timerSeconds / 60;
               if (minutesToAdd > 0.1) {
@@ -304,13 +438,11 @@ export default function JumpStart() {
               }
           } catch (err) {
               console.error("Error saving task progress:", err);
-              // Fallback: Ensure UI doesn't freeze even if save fails
           } finally {
               setActiveTaskId(null);
               setTimerSeconds(0);
           }
       } else {
-          // Start logic
           setTimerSeconds(0);
           setActiveTaskId(taskId);
       }
@@ -389,7 +521,17 @@ export default function JumpStart() {
       saveDataToCloud(newTasks, history);
   };
 
-  const exportData = () => { /* Export logic */ };
+  const exportData = () => {
+      const dataStr = JSON.stringify({ tasks, history }, null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `jumpstart_backup.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+  };
 
   const formatTime = (totalSeconds) => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -472,11 +614,6 @@ export default function JumpStart() {
       );
   };
 
-  const renderCalendar = () => {
-      // (Simplified Calendar logic)
-      return <div className="text-center py-10 text-gray-400">历史记录模块</div>;
-  };
-
   const renderDashboard = () => (
       <div className="space-y-4 animate-fade-in">
           {tasks.length === 0 && !isAddingTask && (
@@ -513,12 +650,10 @@ export default function JumpStart() {
               <FocusParticleCanvas progress={0.5} />
               <div className="relative z-10 text-center text-white">
                   <h1 className={`text-4xl font-bold mb-8 transition-all ${hideTitles ? 'blur-md' : ''}`}>{hideTitles ? 'Current Task' : tasks.find(t=>t.id===activeTaskId)?.title}</h1>
-                  {/* 🔥 Updated Timer Logic: Show Total Accumulated Time */}
                   <div className="text-8xl font-mono mb-4">
                       {(() => {
                           const task = tasks.find(t => t.id === activeTaskId);
                           if (!task) return "00:00";
-                          // Calculate Total = History + Current Session
                           const totalSeconds = (task.completedMinutes * 60) + timerSeconds;
                           return formatTime(totalSeconds);
                       })()}
@@ -543,7 +678,6 @@ export default function JumpStart() {
       )}
 
       <div className="w-full max-w-lg bg-white min-h-screen shadow-xl border-x border-gray-100 relative flex flex-col">
-        {/* Header with User Profile and Eye Toggle */}
         <header className="px-6 pt-12 pb-4 bg-white sticky top-0 z-30 border-b border-gray-50">
             <div className="flex justify-between items-center mb-2">
                 <div>
@@ -591,7 +725,7 @@ export default function JumpStart() {
         <main className="flex-1 px-6 py-6 overflow-y-auto">
             {viewMode === 'dashboard' && renderDashboard()}
             {viewMode === 'tasks' && renderTaskManagement()}
-            {viewMode === 'calendar' && renderCalendar()} 
+            {viewMode === 'calendar' && <CalendarView history={history} exportData={exportData} />} 
         </main>
 
         <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-around items-center z-40 pb-6">
