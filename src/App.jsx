@@ -159,59 +159,27 @@ const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit, hideTitle }) => {
     const progress = Math.min((task.completedMinutes / task.goalMinutes) * 100, 100);
     return (
         <div className="relative w-full mb-3 select-none overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-shadow bg-white h-[88px]">
-            {/* Delete Background */}
             <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-6 rounded-xl"><Trash2 className="text-white" size={24} /></div>
-            
-            {/* Main Card Content */}
             <div className="absolute inset-0 bg-white rounded-xl border border-gray-100 flex z-10 transition-transform duration-200 overflow-hidden"
                 style={{ transform: `translateX(${offsetX}px)` }}
                 onTouchMove={(e) => { const diff = e.touches[0].clientX - e.currentTarget.getBoundingClientRect().x; if(diff < 0) setOffsetX(Math.max(diff, -100)); }}
                 onTouchEnd={() => setOffsetX(offsetX < -50 ? -80 : 0)}
                 onClick={() => offsetX < -10 ? setOffsetX(0) : onClick(task.id)}
             >
-                {/* Left Color Strip */}
                 <div className={`w-1.5 h-full ${task.color}`}></div>
-
-                {/* Content Area */}
                 <div className="flex-1 flex justify-between items-center p-3 pl-4 min-w-0">
                     <div className="flex-1 pr-3 min-w-0 flex flex-col justify-center h-full">
-                        {/* Title Row */}
-                        <h3 className={`font-bold text-base text-gray-900 truncate transition-all ${hideTitle ? 'blur-sm select-none opacity-50' : ''}`}>
-                            {hideTitle ? 'Secret Task' : task.title}
-                        </h3>
-                        
-                        {/* Subtitle Row (Project • Group) */}
-                        <p className={`text-xs text-gray-400 font-medium truncate mt-0.5 transition-all ${hideTitle ? 'opacity-0' : 'opacity-100'}`}>
-                            {task.project || 'Manual'} • {task.group || 'General'}
-                        </p>
-
-                        {/* Meta Row (Time & Edit) */}
+                        <h3 className={`font-bold text-base text-gray-900 truncate transition-all ${hideTitle ? 'blur-sm select-none opacity-50' : ''}`}>{hideTitle ? 'Secret Task' : task.title}</h3>
+                        <p className={`text-xs text-gray-400 font-medium truncate mt-0.5 transition-all ${hideTitle ? 'opacity-0' : 'opacity-100'}`}>{task.project || 'Manual'} • {task.group || 'General'}</p>
                         <div className="flex items-center gap-3 text-xs mt-1.5 text-gray-400 font-mono">
-                            <span className={task.completedMinutes >= task.goalMinutes ? 'text-green-600 font-bold' : ''}>
-                                {Math.round(task.completedMinutes)} / {task.goalMinutes} m
-                            </span>
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onEdit(task); }} 
-                                className="p-1 hover:bg-gray-100 rounded text-gray-300 hover:text-indigo-600 transition-colors"
-                            >
-                                <Pencil size={12}/>
-                            </button>
+                            <span className={task.completedMinutes >= task.goalMinutes ? 'text-green-600 font-bold' : ''}>{Math.round(task.completedMinutes)} / {task.goalMinutes} m</span>
+                            <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1 hover:bg-gray-100 rounded text-gray-300 hover:text-indigo-600 transition-colors"><Pencil size={12}/></button>
                         </div>
                     </div>
-
-                    {/* Play Button */}
-                    <button className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${task.color} text-white shrink-0 hover:scale-105 active:scale-95 transition-transform`}>
-                        <Play fill="currentColor" size={14} className="ml-0.5"/>
-                    </button>
+                    <button className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${task.color} text-white shrink-0 hover:scale-105 active:scale-95 transition-transform`}><Play fill="currentColor" size={14} className="ml-0.5"/></button>
                 </div>
-
-                {/* Bottom Progress Bar */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-50">
-                    <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${progress}%` }} />
-                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-50"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${progress}%` }} /></div>
             </div>
-
-            {/* Clickable delete area */}
             {offsetX <= -80 && <button onClick={(e) => {e.stopPropagation(); onDelete(task.id)}} className="absolute right-0 top-0 bottom-0 w-20 z-20"></button>}
         </div>
     );
@@ -237,7 +205,7 @@ export default function JumpStart() {
   const [showSummary, setShowSummary] = useState(false);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
   const [lastSessionTime, setLastSessionTime] = useState(0);
-  const [hideTitles, setHideTitles] = useState(false); // 🔥 New State for Privacy Mode
+  const [hideTitles, setHideTitles] = useState(false);
 
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
@@ -250,11 +218,8 @@ export default function JumpStart() {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
         else await signInAnonymously(auth); 
       } catch (e) {
-        if (e.message && (e.message.includes('auth/requests-from-referer') || e.code === 'auth/requests-from-referer-blocked')) {
-            console.log("Preview env: Auth restricted, offline mode.");
-        } else {
-            console.warn("Auth failed:", e);
-        }
+        if (e.message && (e.message.includes('auth/requests-from-referer') || e.code === 'auth/requests-from-referer-blocked')) console.log("Preview env: Auth restricted, offline mode.");
+        else console.warn("Auth failed:", e);
         setSyncStatus('offline');
       }
     };
@@ -273,7 +238,7 @@ export default function JumpStart() {
 
   // --- 2. Data Sync ---
   useEffect(() => {
-    if (!user || !db) return; // Use local state
+    if (!user || !db) return; 
     const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
     const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
         if (docSnap.exists()) {
@@ -316,24 +281,36 @@ export default function JumpStart() {
     return () => clearInterval(timerRef.current);
   }, [activeTaskId]);
 
+  // --- 🔥 Safe Task Stop Logic ---
   const handleTaskClick = (taskId) => {
       if (activeTaskId === taskId) {
-          const minutesToAdd = timerSeconds / 60;
-          if (minutesToAdd > 0.1) {
-              const newTasks = tasks.map(t => t.id === taskId ? { ...t, completedMinutes: t.completedMinutes + minutesToAdd } : t);
-              const task = tasks.find(t => t.id === taskId);
-              const today = new Date().toISOString().split('T')[0];
-              const dayRecords = history[today] || [];
-              const newHistory = { ...history, [today]: [...dayRecords, { taskId, title: task.title, minutes: minutesToAdd, timestamp: Date.now(), color: task.color }] };
-              setTasks(newTasks);
-              setHistory(newHistory);
-              saveDataToCloud(newTasks, newHistory);
-              setLastSessionTime(timerSeconds); 
-              setShowSummary(true); 
+          // Stop logic
+          try {
+              const minutesToAdd = timerSeconds / 60;
+              if (minutesToAdd > 0.1) {
+                  const newTasks = tasks.map(t => t.id === taskId ? { ...t, completedMinutes: t.completedMinutes + minutesToAdd } : t);
+                  const task = tasks.find(t => t.id === taskId);
+                  if (task) {
+                      const today = new Date().toISOString().split('T')[0];
+                      const safeHistory = history || {};
+                      const dayRecords = safeHistory[today] || [];
+                      const newHistory = { ...safeHistory, [today]: [...dayRecords, { taskId, title: task.title, minutes: minutesToAdd, timestamp: Date.now(), color: task.color }] };
+                      setTasks(newTasks);
+                      setHistory(newHistory);
+                      saveDataToCloud(newTasks, newHistory);
+                      setLastSessionTime(timerSeconds); 
+                      setShowSummary(true); 
+                  }
+              }
+          } catch (err) {
+              console.error("Error saving task progress:", err);
+              // Fallback: Ensure UI doesn't freeze even if save fails
+          } finally {
+              setActiveTaskId(null);
+              setTimerSeconds(0);
           }
-          setActiveTaskId(null);
-          setTimerSeconds(0);
       } else {
+          // Start logic
           setTimerSeconds(0);
           setActiveTaskId(taskId);
       }
@@ -413,6 +390,14 @@ export default function JumpStart() {
   };
 
   const exportData = () => { /* Export logic */ };
+
+  const formatTime = (totalSeconds) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   // --- Render Functions ---
   const renderTaskManagement = () => {
@@ -528,7 +513,19 @@ export default function JumpStart() {
               <FocusParticleCanvas progress={0.5} />
               <div className="relative z-10 text-center text-white">
                   <h1 className={`text-4xl font-bold mb-8 transition-all ${hideTitles ? 'blur-md' : ''}`}>{hideTitles ? 'Current Task' : tasks.find(t=>t.id===activeTaskId)?.title}</h1>
-                  <div className="text-8xl font-mono mb-12">{Math.floor(timerSeconds/3600)}:{Math.floor((timerSeconds%3600)/60).toString().padStart(2,'0')}:{Math.floor(timerSeconds%60).toString().padStart(2,'0')}</div>
+                  {/* 🔥 Updated Timer Logic: Show Total Accumulated Time */}
+                  <div className="text-8xl font-mono mb-4">
+                      {(() => {
+                          const task = tasks.find(t => t.id === activeTaskId);
+                          if (!task) return "00:00";
+                          // Calculate Total = History + Current Session
+                          const totalSeconds = (task.completedMinutes * 60) + timerSeconds;
+                          return formatTime(totalSeconds);
+                      })()}
+                  </div>
+                  <div className="text-white/50 text-sm mb-12 font-mono">
+                      Current Session: {formatTime(timerSeconds)}
+                  </div>
                   <button onClick={() => handleTaskClick(activeTaskId)} className="bg-white text-black p-6 rounded-full"><Pause size={32}/></button>
               </div>
           </div>
@@ -539,7 +536,7 @@ export default function JumpStart() {
             <div className="bg-gray-800 p-8 rounded-3xl max-w-sm w-full text-center shadow-2xl border border-gray-700">
                 <div className="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle size={32} /></div>
                 <h2 className="text-2xl font-bold text-white mb-2">Session Complete</h2>
-                <p className="text-gray-400 mb-6">已记录: <span className="text-white font-mono font-bold">{formatTime(lastSessionTime)}</span></p>
+                <p className="text-gray-400 mb-6">本次专注: <span className="text-white font-mono font-bold">{formatTime(lastSessionTime)}</span></p>
                 <button onClick={handleSummaryConfirm} className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">Done</button>
             </div>
         </div>
