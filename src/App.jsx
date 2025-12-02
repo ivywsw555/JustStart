@@ -112,6 +112,7 @@ const EditTaskModal = ({ task, onClose, onSave }) => {
     const [title, setTitle] = useState(task.title);
     const [minutes, setMinutes] = useState(task.goalMinutes);
     const [group, setGroup] = useState(task.group || 'General');
+    const [project, setProject] = useState(task.project || 'Manual');
     const [deadlineDate, setDeadlineDate] = useState(() => {
         const d = new Date(task.deadline || Date.now());
         return d.toISOString().split('T')[0];
@@ -120,13 +121,34 @@ const EditTaskModal = ({ task, onClose, onSave }) => {
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6 space-y-4">
                 <div className="flex justify-between items-center mb-2"><h3 className="text-xl font-bold text-gray-900">调整任务</h3><button onClick={onClose}><X size={20}/></button></div>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full text-lg font-bold border-b-2 border-gray-200 outline-none py-1"/>
-                <input type="text" value={group} onChange={(e) => setGroup(e.target.value)} className="w-full text-sm border-b-2 border-gray-200 outline-none py-1" placeholder="分组"/>
-                <div className="flex gap-4">
-                    <input type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-full text-lg font-bold border-b-2 border-gray-200 outline-none py-1"/>
-                    <input type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} className="w-full text-sm border-b-2 border-gray-200 outline-none py-1"/>
+                
+                <div>
+                    <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">任务名称</label>
+                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full text-lg font-bold border-b-2 border-gray-200 outline-none py-1 bg-transparent"/>
                 </div>
-                <button onClick={() => { onSave(task.id, { title, goalMinutes: parseInt(minutes), group, deadline: new Date(deadlineDate).getTime() }); onClose(); }} className="w-full py-3 bg-black text-white font-bold rounded-xl">保存</button>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">所属项目</label>
+                        <input type="text" value={project} onChange={(e) => setProject(e.target.value)} className="w-full text-sm border-b-2 border-gray-200 outline-none py-1 bg-transparent" placeholder="例如: 英语学习"/>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">阶段/分组</label>
+                        <input type="text" value={group} onChange={(e) => setGroup(e.target.value)} className="w-full text-sm border-b-2 border-gray-200 outline-none py-1 bg-transparent" placeholder="例如: 单词"/>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">每日目标(分)</label>
+                        <input type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-full text-lg font-bold border-b-2 border-gray-200 outline-none py-1 bg-transparent"/>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">截止日期</label>
+                        <input type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} className="w-full text-sm border-b-2 border-gray-200 outline-none py-1 bg-transparent"/>
+                    </div>
+                </div>
+                <button onClick={() => { onSave(task.id, { title, goalMinutes: parseInt(minutes), group, project, deadline: new Date(deadlineDate).getTime() }); onClose(); }} className="w-full py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">保存更改</button>
             </div>
         </div>
     );
@@ -136,34 +158,60 @@ const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit, hideTitle }) => {
     const [offsetX, setOffsetX] = useState(0);
     const progress = Math.min((task.completedMinutes / task.goalMinutes) * 100, 100);
     return (
-        <div className="relative w-full mb-4 select-none overflow-hidden rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-6 rounded-2xl"><Trash2 className="text-white" size={24} /></div>
-            <div className="absolute inset-0 bg-white rounded-2xl border border-gray-100 flex flex-col justify-between z-10 transition-transform duration-200"
+        <div className="relative w-full mb-3 select-none overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-shadow bg-white h-[88px]">
+            {/* Delete Background */}
+            <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-6 rounded-xl"><Trash2 className="text-white" size={24} /></div>
+            
+            {/* Main Card Content */}
+            <div className="absolute inset-0 bg-white rounded-xl border border-gray-100 flex z-10 transition-transform duration-200 overflow-hidden"
                 style={{ transform: `translateX(${offsetX}px)` }}
                 onTouchMove={(e) => { const diff = e.touches[0].clientX - e.currentTarget.getBoundingClientRect().x; if(diff < 0) setOffsetX(Math.max(diff, -100)); }}
                 onTouchEnd={() => setOffsetX(offsetX < -50 ? -80 : 0)}
                 onClick={() => offsetX < -10 ? setOffsetX(0) : onClick(task.id)}
             >
-                <div className="flex justify-between items-center p-5 relative z-20">
-                    <div className="flex-1 pr-4">
-                        <h3 className={`font-bold text-lg text-gray-800 transition-all ${hideTitle ? 'blur-sm select-none opacity-50' : ''}`}>
+                {/* Left Color Strip */}
+                <div className={`w-1.5 h-full ${task.color}`}></div>
+
+                {/* Content Area */}
+                <div className="flex-1 flex justify-between items-center p-3 pl-4 min-w-0">
+                    <div className="flex-1 pr-3 min-w-0 flex flex-col justify-center h-full">
+                        {/* Title Row */}
+                        <h3 className={`font-bold text-base text-gray-900 truncate transition-all ${hideTitle ? 'blur-sm select-none opacity-50' : ''}`}>
                             {hideTitle ? 'Secret Task' : task.title}
                         </h3>
-                        {task.group && (
-                            <p className={`text-[10px] font-bold text-indigo-400 uppercase tracking-wider transition-all ${hideTitle ? 'opacity-0' : 'opacity-100'}`}>
-                                {task.project} • {task.group}
-                            </p>
-                        )}
-                        <div className="flex items-center gap-3 text-xs mt-2 text-gray-400">
-                            <span>{Math.round(task.completedMinutes)}/{task.goalMinutes}m</span>
-                            <button onClick={(e) => { e.stopPropagation(); onEdit(task); }}><Pencil size={12}/></button>
+                        
+                        {/* Subtitle Row (Project • Group) */}
+                        <p className={`text-xs text-gray-400 font-medium truncate mt-0.5 transition-all ${hideTitle ? 'opacity-0' : 'opacity-100'}`}>
+                            {task.project || 'Manual'} • {task.group || 'General'}
+                        </p>
+
+                        {/* Meta Row (Time & Edit) */}
+                        <div className="flex items-center gap-3 text-xs mt-1.5 text-gray-400 font-mono">
+                            <span className={task.completedMinutes >= task.goalMinutes ? 'text-green-600 font-bold' : ''}>
+                                {Math.round(task.completedMinutes)} / {task.goalMinutes} m
+                            </span>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onEdit(task); }} 
+                                className="p-1 hover:bg-gray-100 rounded text-gray-300 hover:text-indigo-600 transition-colors"
+                            >
+                                <Pencil size={12}/>
+                            </button>
                         </div>
                     </div>
-                    <button className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md ${task.color} text-white`}><Play fill="currentColor" size={16}/></button>
+
+                    {/* Play Button */}
+                    <button className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${task.color} text-white shrink-0 hover:scale-105 active:scale-95 transition-transform`}>
+                        <Play fill="currentColor" size={14} className="ml-0.5"/>
+                    </button>
                 </div>
-                <div className="absolute bottom-0 left-0 h-1.5 bg-gray-100 w-full"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${progress}%` }} /></div>
+
+                {/* Bottom Progress Bar */}
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-50">
+                    <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                </div>
             </div>
-            <div className="h-24"></div>
+
+            {/* Clickable delete area */}
             {offsetX <= -80 && <button onClick={(e) => {e.stopPropagation(); onDelete(task.id)}} className="absolute right-0 top-0 bottom-0 w-20 z-20"></button>}
         </div>
     );
