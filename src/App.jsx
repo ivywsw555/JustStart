@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Plus, Trash2, Brain, CheckCircle, ChevronRight, ChevronLeft, Shuffle, Coffee, Sparkles, Loader2, Calendar as CalendarIcon, ArrowLeft, Pencil, X, Download, LogIn, LogOut, User, Cloud, LayoutList, Timer, Archive, Clock, Layers, ChevronDown, ChevronUp, Server, Check, CloudOff } from 'lucide-react';
+import { Play, Pause, Plus, Trash2, Brain, CheckCircle, ChevronRight, ChevronLeft, Shuffle, Coffee, Sparkles, Loader2, Calendar as CalendarIcon, ArrowLeft, Pencil, X, Download, LogIn, LogOut, User, Cloud, LayoutList, Timer, Archive, Clock, Layers, ChevronDown, ChevronUp, Server, Check, CloudOff, Eye, EyeOff } from 'lucide-react';
 
 // --- Firebase Imports ---
 import { initializeApp } from "firebase/app";
@@ -69,7 +69,6 @@ const callLocalLLM = async (systemPrompt, userPrompt, jsonMode = false) => {
       }
       return JSON.stringify({ advice: "Mock: 保持专注，你的数据正在云端漫游。" });
   }
-  // Real Local Call implementation omitted for brevity, same as before
   return null;
 };
 
@@ -133,7 +132,7 @@ const EditTaskModal = ({ task, onClose, onSave }) => {
     );
 };
 
-const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit }) => {
+const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit, hideTitle }) => {
     const [offsetX, setOffsetX] = useState(0);
     const progress = Math.min((task.completedMinutes / task.goalMinutes) * 100, 100);
     return (
@@ -147,7 +146,14 @@ const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit }) => {
             >
                 <div className="flex justify-between items-center p-5 relative z-20">
                     <div className="flex-1 pr-4">
-                        <h3 className="font-bold text-lg text-gray-800">{task.title}</h3>
+                        <h3 className={`font-bold text-lg text-gray-800 transition-all ${hideTitle ? 'blur-sm select-none opacity-50' : ''}`}>
+                            {hideTitle ? 'Secret Task' : task.title}
+                        </h3>
+                        {task.group && (
+                            <p className={`text-[10px] font-bold text-indigo-400 uppercase tracking-wider transition-all ${hideTitle ? 'opacity-0' : 'opacity-100'}`}>
+                                {task.project} • {task.group}
+                            </p>
+                        )}
                         <div className="flex items-center gap-3 text-xs mt-2 text-gray-400">
                             <span>{Math.round(task.completedMinutes)}/{task.goalMinutes}m</span>
                             <button onClick={(e) => { e.stopPropagation(); onEdit(task); }}><Pencil size={12}/></button>
@@ -183,6 +189,7 @@ export default function JumpStart() {
   const [showSummary, setShowSummary] = useState(false);
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false);
   const [lastSessionTime, setLastSessionTime] = useState(0);
+  const [hideTitles, setHideTitles] = useState(false); // 🔥 New State for Privacy Mode
 
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
@@ -273,8 +280,8 @@ export default function JumpStart() {
               setTasks(newTasks);
               setHistory(newHistory);
               saveDataToCloud(newTasks, newHistory);
-              setLastSessionTime(timerSeconds); // Add this!
-              setShowSummary(true); // Add this!
+              setLastSessionTime(timerSeconds); 
+              setShowSummary(true); 
           }
           setActiveTaskId(null);
           setTimerSeconds(0);
@@ -286,19 +293,17 @@ export default function JumpStart() {
 
   const handleSummaryConfirm = () => { setShowSummary(false); setTimerSeconds(0); };
 
-  const handleAiAdvice = async () => { /* AI Logic Omitted for brevity, kept from prev version */ };
+  const handleAiAdvice = async () => { /* AI Logic Omitted */ };
   
-  const generateSmartPlan = async () => { /* AI Logic Omitted for brevity */ };
+  const generateSmartPlan = async () => { /* AI Logic Omitted */ };
 
   const addNewTask = () => {
     if (!newTaskInput.trim()) return;
     
-    // 🔥 Local Parser: Try to extract Time (e.g., "45m") and Group (e.g., "#Reading")
     let title = newTaskInput;
     let goalMinutes = 30;
     let group = 'General';
 
-    // Parse time: 45m, 1.5h, 90min
     const timeMatch = title.match(/(\d+(?:\.\d+)?)(m|min|h)/i);
     if (timeMatch) {
         const val = parseFloat(timeMatch[1]);
@@ -307,7 +312,6 @@ export default function JumpStart() {
         title = title.replace(timeMatch[0], '').trim();
     }
 
-    // Parse group: #Tag or [Tag]
     const groupMatch = title.match(/(?:#|\[)(\w+)(?:\])?/);
     if (groupMatch) {
         group = groupMatch[1];
@@ -362,7 +366,7 @@ export default function JumpStart() {
 
   const exportData = () => { /* Export logic */ };
 
-  // --- Render Functions (Moved OUT of main return to fix re-render bug) ---
+  // --- Render Functions ---
   const renderTaskManagement = () => {
       const activeTasks = tasks.filter(t => t.status !== 'archived');
       const archivedTasks = tasks.filter(t => t.status === 'archived');
@@ -381,12 +385,16 @@ export default function JumpStart() {
               {Object.entries(groupedTasks).map(([project, groups]) => (
                   <div key={project} className="space-y-3">
                       <div className="flex items-center justify-between px-2 cursor-pointer hover:bg-gray-50 rounded-lg py-1">
-                          <h3 className="text-lg font-bold text-indigo-900 flex items-center gap-2"><Layers size={18} /> {project}</h3>
+                          <h3 className={`text-lg font-bold text-indigo-900 flex items-center gap-2 transition-all ${hideTitles ? 'blur-sm select-none' : ''}`}>
+                              <Layers size={18} /> {hideTitles ? '******' : project}
+                          </h3>
                           <ChevronUp size={16}/>
                       </div>
                       {Object.entries(groups).map(([groupName, groupTasks]) => (
                           <div key={groupName} className="pl-4 border-l-2 border-indigo-100 ml-2">
-                              <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2">{groupName}</h4>
+                              <h4 className={`text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2 transition-all ${hideTitles ? 'blur-sm select-none' : ''}`}>
+                                  {hideTitles ? '***' : groupName}
+                              </h4>
                               <div className="space-y-2">
                                   {groupTasks.map(t => {
                                       const daysLeft = Math.ceil(((t.deadline || Date.now()) - Date.now()) / (1000 * 60 * 60 * 24));
@@ -394,7 +402,9 @@ export default function JumpStart() {
                                       return (
                                           <div key={t.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
                                               <div className="overflow-hidden">
-                                                  <h4 className="font-bold text-gray-800 truncate">{t.title}</h4>
+                                                  <h4 className={`font-bold text-gray-800 truncate transition-all ${hideTitles ? 'blur-sm select-none' : ''}`}>
+                                                      {hideTitles ? 'Secret Task' : t.title}
+                                                  </h4>
                                                   <div className="flex gap-2 text-[10px] mt-1">
                                                       <span className={`px-1.5 py-0.5 rounded ${isExpired ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{isExpired ? 'Expired' : `${daysLeft}d left`}</span>
                                                       <span className="text-gray-400">{Math.round(t.completedMinutes)} / {t.goalMinutes}m</span>
@@ -418,7 +428,7 @@ export default function JumpStart() {
                       <div className="space-y-2 opacity-60 hover:opacity-100 transition-opacity">
                           {archivedTasks.map(t => (
                               <div key={t.id} className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex justify-between items-center">
-                                  <span className="font-medium text-gray-500 line-through text-sm">{t.title}</span>
+                                  <span className={`font-medium text-gray-500 line-through text-sm transition-all ${hideTitles ? 'blur-sm select-none' : ''}`}>{hideTitles ? '******' : t.title}</span>
                                   <button onClick={() => handleReactivateTask(t.id)} className="text-indigo-600 text-xs font-bold hover:underline">恢复</button>
                               </div>
                           ))}
@@ -430,8 +440,8 @@ export default function JumpStart() {
   };
 
   const renderCalendar = () => {
-      // (Simplified Calendar logic for brevity, functional equivalent to previous)
-      return <div className="text-center py-10 text-gray-400">历史记录模块 (功能保持不变)</div>;
+      // (Simplified Calendar logic)
+      return <div className="text-center py-10 text-gray-400">历史记录模块</div>;
   };
 
   const renderDashboard = () => (
@@ -443,7 +453,7 @@ export default function JumpStart() {
               </div>
           )}
           {tasks.filter(t => t.status !== 'archived').map(task => (
-              <SwipeableTaskItem key={task.id} task={task} onClick={handleTaskClick} onEdit={setEditingTask} onDelete={handleArchiveTask} />
+              <SwipeableTaskItem key={task.id} task={task} onClick={handleTaskClick} onEdit={setEditingTask} onDelete={handleArchiveTask} hideTitle={hideTitles} />
           ))}
           {isAddingTask ? (
               <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-4">
@@ -469,7 +479,7 @@ export default function JumpStart() {
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
               <FocusParticleCanvas progress={0.5} />
               <div className="relative z-10 text-center text-white">
-                  <h1 className="text-4xl font-bold mb-8">{tasks.find(t=>t.id===activeTaskId)?.title}</h1>
+                  <h1 className={`text-4xl font-bold mb-8 transition-all ${hideTitles ? 'blur-md' : ''}`}>{hideTitles ? 'Current Task' : tasks.find(t=>t.id===activeTaskId)?.title}</h1>
                   <div className="text-8xl font-mono mb-12">{Math.floor(timerSeconds/3600)}:{Math.floor((timerSeconds%3600)/60).toString().padStart(2,'0')}:{Math.floor(timerSeconds%60).toString().padStart(2,'0')}</div>
                   <button onClick={() => handleTaskClick(activeTaskId)} className="bg-white text-black p-6 rounded-full"><Pause size={32}/></button>
               </div>
@@ -488,11 +498,16 @@ export default function JumpStart() {
       )}
 
       <div className="w-full max-w-lg bg-white min-h-screen shadow-xl border-x border-gray-100 relative flex flex-col">
-        {/* Header */}
+        {/* Header with User Profile and Eye Toggle */}
         <header className="px-6 pt-12 pb-4 bg-white sticky top-0 z-30 border-b border-gray-50">
             <div className="flex justify-between items-center mb-2">
                 <div>
-                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900">JumpStart <span className="text-blue-600">.</span></h1>
+                    <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 flex items-center gap-2">
+                        JumpStart <span className="text-blue-600">.</span>
+                        <button onClick={() => setHideTitles(!hideTitles)} className="text-gray-400 hover:text-gray-600 transition-colors ml-1">
+                            {hideTitles ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                    </h1>
                     <div className="flex items-center gap-2 mt-1">
                         {syncStatus === 'syncing' && <span className="text-xs text-blue-500 flex items-center gap-1"><Loader2 size={10} className="animate-spin"/> 同步中...</span>}
                         {syncStatus === 'synced' && <span className="text-xs text-green-500 flex items-center gap-1"><Check size={10}/> 已同步</span>}
