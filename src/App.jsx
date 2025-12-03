@@ -789,7 +789,7 @@ export default function JumpStart() {
 
         const handleSave = () => {
             const mins = parseInt(minutes);
-            if (mins && mins !== 0) {                
+            if (mins && mins !== 0) {
                 onSave(task.id, mins * 60);
                 onClose();
             }
@@ -895,7 +895,6 @@ export default function JumpStart() {
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
-                            {/* Only Play Button Remains on the face */}
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md ${task.color} text-white shrink-0`}><Play fill="currentColor" size={16} className="ml-0.5" /></div>
                         </div>
                     </div>
@@ -922,7 +921,7 @@ export default function JumpStart() {
 
                 const currentTotal = t.completedMinutes || 0;
                 const newTotal = Math.max(0, currentTotal + minutesToAdd);
-                return { ...t, completedMinutes: newTotal };           
+                return { ...t, completedMinutes: newTotal };
             }
             return t;
         });
@@ -1026,9 +1025,9 @@ export default function JumpStart() {
     const getTaskTodayMinutes = (taskId) => {
         const today = getTodayString();
         const dayRecords = history[today] || [];
-       const total = dayRecords
-        .filter(r => r.taskId === taskId)
-        .reduce((acc, curr) => acc + curr.minutes, 0);
+        const total = dayRecords
+            .filter(r => r.taskId === taskId)
+            .reduce((acc, curr) => acc + curr.minutes, 0);
 
         return Math.max(0, total);
     };
@@ -1188,6 +1187,9 @@ export default function JumpStart() {
                                 className="group relative flex flex-col items-center focus:outline-none transition-transform active:scale-95"
                                 aria-label="Toggle Timer"
                             >
+                                <div className="text-white/30 text-sm md:text-base font-mono uppercase tracking-widest select-none">
+                                    Today's Session: {formatTime(getTaskTodayMinutes(activeTaskId || '') * 60)}
+                                </div>
                                 <div className={`
                                         text-5xl md:text-7xl font-mono font-medium tracking-wider tabular-nums 
                                         transition-all duration-300 ease-out
@@ -1209,7 +1211,6 @@ export default function JumpStart() {
                                     Click to Pause
                                 </span>
                             </button>
-
                             <div className="text-white/30 text-sm md:text-base font-mono uppercase tracking-widest select-none">
                                 Current Session: {formatTime(timerSeconds)}
                             </div>
