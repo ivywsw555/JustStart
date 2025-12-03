@@ -651,37 +651,26 @@ export default function JumpStart() {
     }, [activeTaskId]);
 
     const handleTaskClick = (taskId) => {
-        if (activeTaskId === taskId) {
-            try {
-                const minutesToAdd = timerSeconds / 60;
-                if (minutesToAdd > 0.1) {
-                    saveSession(taskId, timerSeconds);
-                    const newTasks = tasks.map(t => t.id === taskId ? { ...t, completedMinutes: t.completedMinutes + minutesToAdd } : t);
-                    const task = tasks.find(t => t.id === taskId);
-                    if (task) {
-                        const today = new Date().toISOString().split('T')[0];
-                        const safeHistory = history || {};
-                        const dayRecords = safeHistory[today] || [];
-                        const newHistory = { ...safeHistory, [today]: [...dayRecords, { taskId, title: task.title, minutes: minutesToAdd, timestamp: Date.now(), color: task.color }] };
-                        setTasks(newTasks);
-                        setHistory(newHistory);
-                        saveDataToCloud(newTasks, newHistory);
-                        setLastSessionTime(timerSeconds);
-                        setShowSummary(true);
-                    }
-                }
-            } catch (err) {
-                console.error("Error saving task progress:", err);
-            } finally {
-                setActiveTaskId(null);
-                setTimerSeconds(0);
+    if (activeTaskId === taskId) {
+        try {
+            if (timerSeconds > 5) {
+                saveSession(taskId, timerSeconds);
+                
+                setLastSessionTime(timerSeconds);
+                setShowSummary(true);
             }
-        } else {
+        } catch (err) {
+            console.error("Error saving task progress:", err);
+        } finally {
+            setActiveTaskId(null);
             setTimerSeconds(0);
-            setActiveTaskId(taskId);
         }
-    };
-
+    } 
+    else {
+        setTimerSeconds(0);
+        setActiveTaskId(taskId);
+    }
+};
     const handleSummaryConfirm = () => { setShowSummary(false); setTimerSeconds(0); };
 
     const handleAiAdvice = async () => { /* AI Logic Omitted */ };
@@ -914,38 +903,41 @@ export default function JumpStart() {
         setEditingTask(null);
     };
     const saveSession = (taskId, seconds) => {
-        const minutesToAdd = seconds / 60;
+    const minutesToAdd = seconds / 60;
+    
+    const newTasks = tasks.map(t => {
+        if (t.id === taskId) {
+            return { ...t, completedMinutes: t.completedMinutes + minutesToAdd };
+        }
+        return t;
+    });
 
-        const newTasks = tasks.map(t => {
-            if (t.id === taskId) {
-
-                const currentTotal = t.completedMinutes || 0;
-                const newTotal = Math.max(0, currentTotal + minutesToAdd);
-                return { ...t, completedMinutes: newTotal };
-            }
-            return t;
-        });
-
-        const task = tasks.find(t => t.id === taskId);
-        const today = getTodayString();
-        const safeHistory = history || {};
-        const dayRecords = safeHistory[today] || [];
-        const newHistory = {
-            ...safeHistory,
-            [today]: [...dayRecords, {
+    const task = tasks.find(t => t.id === taskId);
+    
+    
+    const today = getTodayString(); 
+    
+    const safeHistory = history || {};
+    const dayRecords = safeHistory[today] || [];
+    
+    const newHistory = {
+        ...safeHistory,
+        [today]: [
+            ...dayRecords, 
+            {
                 taskId,
                 title: task ? task.title : 'Unknown',
                 minutes: minutesToAdd,
                 timestamp: Date.now(),
                 color: task ? task.color : 'bg-gray-500'
-            }]
-        };
-
-        setTasks(newTasks);
-        setHistory(newHistory);
-        saveDataToCloud(newTasks, newHistory);
+            }
+        ]
     };
 
+    setTasks(newTasks);
+    setHistory(newHistory); 
+    saveDataToCloud(newTasks, newHistory);
+};
     const handleManualRecord = (id, seconds) => {
         saveSession(id, seconds);
     };
@@ -992,11 +984,11 @@ export default function JumpStart() {
         saveDataToCloud(newTasks, history);
     };
 
-    const deleteTask = (id) => {
-        const newTasks = tasks.filter(t => t.id !== id);
-        setTasks(newTasks);
-        saveDataToCloud(newTasks, history);
-    };
+    // const deleteTask = (id) => {
+    //     const newTasks = tasks.filter(t => t.id !== id);
+    //     setTasks(newTasks);
+    //     saveDataToCloud(newTasks, history);
+    // };
 
     const exportData = () => {
         const dataStr = JSON.stringify({ tasks, history }, null, 2);
