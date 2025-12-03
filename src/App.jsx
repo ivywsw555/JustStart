@@ -1188,9 +1188,10 @@ export default function JumpStart() {
                                 aria-label="Toggle Timer"
                             >
                                 <div className="text-white/30 text-sm md:text-base font-mono uppercase tracking-widest select-none">
-                                    Today's Session: {formatTime(getTaskTodayMinutes(activeTaskId || '') * 60)}
+                                    Today: {formatTime(getTaskTodayMinutes(activeTaskId || '') * 60 + timerSeconds)}
                                 </div>
                                 <div className={`
+                                        mt-3
                                         text-5xl md:text-7xl font-mono font-medium tracking-wider tabular-nums 
                                         transition-all duration-300 ease-out
                                         cursor-pointer select-none
