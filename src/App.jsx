@@ -17,7 +17,8 @@ import {
     doc,
     setDoc,
     onSnapshot,
-    collection
+    // collection,
+    // getAnalytics 
 } from "firebase/firestore";
 
 // --- 🔥 LLM Configuration ---
@@ -28,7 +29,7 @@ const AI_CONFIG = {
 };
 
 // --- Firebase Config ---
-const YOUR_FIREBASE_CONFIG = {
+const firebaseConfig = {
     apiKey: "AIzaSyCXowQfMj1aU6SF_sYvRAvHItr_4EDAu7E",
     authDomain: "juststart-e864a.firebaseapp.com",
     projectId: "juststart-e864a",
@@ -38,17 +39,9 @@ const YOUR_FIREBASE_CONFIG = {
     measurementId: "G-LCNVGLK197"
 };
 
-const getFirebaseConfig = () => {
-    try {
-        if (Object.keys(YOUR_FIREBASE_CONFIG).length > 0 && YOUR_FIREBASE_CONFIG.apiKey) {
-            return YOUR_FIREBASE_CONFIG;
-        }
-        return typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-    } catch (e) { return {}; }
-};
-
-const firebaseConfig = getFirebaseConfig();
-const app = Object.keys(firebaseConfig).length > 0 ? initializeApp(firebaseConfig) : null;
+// const firebaseConfig = getFirebaseConfig();
+const app = initializeApp(firebaseConfig);
+// const analytics = getAnalytics(app);
 const auth = app ? getAuth(app) : null;
 const db = app ? getFirestore(app) : null;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'jumpstart-app';
