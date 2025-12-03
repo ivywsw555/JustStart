@@ -79,108 +79,344 @@ const getDefaultDeadline = (offsetDays = 90) => {
     return d.getTime();
 };
 
-const INITIAL_TASKS = []; 
-
-// --- Sub-Components (Canvas, Modal, Items) ---
+// const INITIAL_TASKS = []; 
+const INITIAL_TASKS = [
+  { 
+    id: 1, 
+    title: 'LeetCode 算法刷题', 
+    dailyGoal: "攻克动态规划 (DP) 难关", 
+    goalMinutes: 60, 
+    completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
+    color: 'bg-blue-500', 
+    status: 'active', 
+    createdAt: Date.now(), 
+    deadline: getDefaultDeadline(30), 
+    group: 'Algorithm', 
+    project: 'Interview Prep' 
+  },
+  { 
+    id: 2, 
+    title: 'System Design 学习', 
+    dailyGoal: "看完 Alex Xu 第 5 章", 
+    goalMinutes: 45, 
+    completedMinutes: 20, // 进行中
+    color: 'bg-indigo-500', 
+    status: 'active', 
+    createdAt: Date.now(), 
+    deadline: getDefaultDeadline(14), 
+    group: 'Architecture', 
+    project: 'Interview Prep' 
+  },
+  { 
+    id: 3, 
+    title: 'React 源码阅读', 
+    dailyGoal: "理解 Fiber 架构", 
+    goalMinutes: 90, 
+    completedMinutes: 0, // 未开始
+    color: 'bg-emerald-500', 
+    status: 'active', 
+    createdAt: Date.now(), 
+    deadline: getDefaultDeadline(60), 
+    group: 'Frontend', 
+    project: 'Skill Up' 
+  },
+  { 
+    id: 4, 
+    title: '旧的英语计划', 
+    dailyGoal: "背单词", 
+    goalMinutes: 20, 
+    completedMinutes: 200, 
+    color: 'bg-amber-500', 
+    status: 'archived', // 已归档 (在管理页面显示)
+    createdAt: Date.now(), 
+    deadline: getDefaultDeadline(-5), // 已过期
+    group: 'Vocabulary', 
+    project: 'English' 
+  }
+];
 const FocusParticleCanvas = ({ progress }) => {
     const canvasRef = useRef(null);
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         let animationFrameId;
-        const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+        
+        // 初始化尺寸
+        const resize = () => { 
+            canvas.width = window.innerWidth; 
+            canvas.height = window.innerHeight; 
+        };
         window.addEventListener('resize', resize);
         resize();
+
+        // 粒子系统配置
         const particles = [];
+        const particleCount = 80; // 粒子数量
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
-        for(let i=0; i<60; i++) particles.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, vx:0, vy:0, life:0, maxLife:100}); 
+        const baseColor = { r: 245, g: 158, b: 11 }; // 琥珀金 (Amber-500)
+
+        // 粒子类
+        class Particle {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                // 随机分布在屏幕各处，但在中心附近更密集
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * Math.max(canvas.width, canvas.height) * 0.6;
+                this.x = centerX + Math.cos(angle) * radius;
+                this.y = centerY + Math.sin(angle) * radius;
+                
+                // 极其缓慢的漂浮速度
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                
+                this.size = Math.random() * 2; // 粒子大小
+                this.alpha = Math.random() * 0.5; // 初始透明度
+                this.targetAlpha = Math.random() * 0.8; // 目标透明度（用于闪烁）
+                this.flickerSpeed = 0.01 + Math.random() * 0.02; // 闪烁速度
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // 简单的闪烁逻辑
+                if (this.alpha < this.targetAlpha) {
+                    this.alpha += this.flickerSpeed;
+                    if (this.alpha >= this.targetAlpha) this.targetAlpha = 0.1; // 变亮后变暗
+                } else {
+                    this.alpha -= this.flickerSpeed;
+                    if (this.alpha <= 0.1) {
+                        this.targetAlpha = Math.random() * 0.8; // 变暗后随机变亮
+                        // 如果粒子跑太远或看不见了，重置位置
+                        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                            this.init();
+                        }
+                    }
+                }
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        // 初始化粒子
+        for(let i=0; i<particleCount; i++) {
+            particles.push(new Particle());
+        }
+
+        let time = 0;
+
         const render = () => {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath(); ctx.arc(centerX, centerY, 50 + progress * 50, 0, Math.PI * 2); 
-            ctx.fillStyle = '#F59E0B'; ctx.globalAlpha = 0.1; ctx.fill();
+            time += 0.015; // 时间流逝速度
+
+            // 1. 背景：带有拖尾效果的深邃黑夜（不完全清除画布，制造光晕残留）
+            ctx.fillStyle = 'rgba(5, 5, 10, 0.15)'; // 深蓝黑 + 透明度
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 2. 混合模式：滤色（让光叠加变亮）
+            ctx.globalCompositeOperation = 'screen';
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            // --- 核心逻辑：呼吸灯效果 ---
+            // 使用正弦波模拟呼吸：(sin(t) + 1) / 2 产生 0 到 1 的平滑波动
+            const breath = (Math.sin(time) + 1) / 20; 
+            
+            // 基础光晕大小随进度(progress)增加，随呼吸(breath)波动
+            const baseRadius = 30 + (progress * 100); 
+            const pulseRadius = baseRadius + (breath * 20); 
+
+            // 3. 绘制外层柔光 (Warm Halo)
+            const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, pulseRadius * 2);
+            gradient.addColorStop(0, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, ${0.15 + breath * 0.05})`); // 中心稍亮
+            gradient.addColorStop(0.5, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, ${0.05})`); // 中间衰减
+            gradient.addColorStop(1, 'rgba(0,0,0,0)'); // 边缘透明
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, pulseRadius * 2, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // 4. 绘制核心亮斑 (The Lamp Core)
+            // 核心也会轻微呼吸，让人感觉它是活的
+            // const coreRadius = 8 + (progress * 5) + (breath * 2);
+            // ctx.beginPath();
+            // ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
+            // // 核心是白色的，带有强烈的金色阴影
+            // ctx.fillStyle = 'rgba(255, 250, 240, 0.9)'; 
+            // ctx.shadowBlur = 30 + (breath * 10);
+            // ctx.shadowColor = `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, 0.8)`;
+            // ctx.fill();
+            
+            // 重置阴影，避免影响粒子
+            ctx.shadowBlur = 0;
+
+            // 5. 绘制悬浮微尘
+            particles.forEach(p => {
+                p.update();
+                p.draw(ctx);
+            });
+
+            // 恢复默认混合模式
+            ctx.globalCompositeOperation = 'source-over';
+            
             animationFrameId = requestAnimationFrame(render);
         };
+
         render();
-        return () => { window.removeEventListener('resize', resize); cancelAnimationFrame(animationFrameId); };
+
+        return () => { 
+            window.removeEventListener('resize', resize); 
+            cancelAnimationFrame(animationFrameId); 
+        };
     }, [progress]);
-    return <canvas ref={canvasRef} className="absolute inset-0 z-0" />;
+
+    return <canvas ref={canvasRef} className="absolute inset-0 z-0 bg-[#05050A]" />;
 };
+
+
 
 const EditTaskModal = ({ task, onClose, onSave }) => {
     const [title, setTitle] = useState(task.title);
     const [minutes, setMinutes] = useState(task.goalMinutes);
     const [group, setGroup] = useState(task.group || 'General');
     const [project, setProject] = useState(task.project || 'Manual');
+    // 新增状态：今日具体目标
+    const [dailyGoal, setDailyGoal] = useState(task.dailyGoal || '');
+    
     const [deadlineDate, setDeadlineDate] = useState(() => {
         const d = new Date(task.deadline || Date.now());
+        // 格式化为 YYYY-MM-DD 以适配 input type="date"
         return d.toISOString().split('T')[0];
     });
+
+    const handleSave = () => {
+        const newDeadline = new Date(deadlineDate).getTime();
+        // 保存时包含 dailyGoal
+        onSave(task.id, { 
+            title, 
+            goalMinutes: parseInt(minutes), 
+            group, 
+            project, 
+            dailyGoal, 
+            deadline: newDeadline 
+        });
+        onClose();
+    };
+
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6 space-y-4">
-                <div className="flex justify-between items-center mb-2"><h3 className="text-xl font-bold text-gray-900">调整任务</h3><button onClick={onClose}><X size={20}/></button></div>
+                {/* 标题栏 */}
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-xl font-bold text-gray-900">调整任务</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                        <X size={20}/>
+                    </button>
+                </div>
                 
+                {/* 任务名称 */}
                 <div>
-                    <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">任务名称</label>
-                    <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full text-lg font-bold border-b-2 border-gray-200 outline-none py-1 bg-transparent"/>
+                    <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">
+                        任务名称
+                    </label>
+                    <input 
+                        type="text" 
+                        value={title} 
+                        onChange={(e) => setTitle(e.target.value)} 
+                        className="w-full text-lg font-bold border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent"
+                    />
                 </div>
 
+                {/* 新增：今日具体目标输入框 */}
+                <div>
+                    <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">
+                        今日具体目标
+                    </label>
+                    <input 
+                        type="text" 
+                        value={dailyGoal} 
+                        onChange={(e) => setDailyGoal(e.target.value)} 
+                        className="w-full text-base font-medium text-gray-700 border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent placeholder-gray-300" 
+                        placeholder="例如: 完成第3章练习"
+                    />
+                </div>
+
+                {/* 项目与分组 */}
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">所属项目</label>
-                        <input type="text" value={project} onChange={(e) => setProject(e.target.value)} className="w-full text-sm border-b-2 border-gray-200 outline-none py-1 bg-transparent" placeholder="例如: 英语学习"/>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">
+                            所属项目
+                        </label>
+                        <input 
+                            type="text" 
+                            value={project} 
+                            onChange={(e) => setProject(e.target.value)} 
+                            className="w-full text-sm border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent" 
+                            placeholder="例如: 英语学习"
+                        />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">阶段/分组</label>
-                        <input type="text" value={group} onChange={(e) => setGroup(e.target.value)} className="w-full text-sm border-b-2 border-gray-200 outline-none py-1 bg-transparent" placeholder="例如: 单词"/>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">
+                            阶段/分组
+                        </label>
+                        <input 
+                            type="text" 
+                            value={group} 
+                            onChange={(e) => setGroup(e.target.value)} 
+                            className="w-full text-sm border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent" 
+                            placeholder="例如: 单词"
+                        />
                     </div>
                 </div>
 
+                {/* 时间与截止日期 */}
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">每日目标(分)</label>
-                        <input type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-full text-lg font-bold border-b-2 border-gray-200 outline-none py-1 bg-transparent"/>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">
+                            每日目标(分)
+                        </label>
+                        <input 
+                            type="number" 
+                            value={minutes} 
+                            onChange={(e) => setMinutes(e.target.value)} 
+                            className="w-full text-lg font-bold border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent"
+                        />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">截止日期</label>
-                        <input type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} className="w-full text-sm border-b-2 border-gray-200 outline-none py-1 bg-transparent"/>
+                        <label className="block text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">
+                            截止日期
+                        </label>
+                        <input 
+                            type="date" 
+                            value={deadlineDate} 
+                            onChange={(e) => setDeadlineDate(e.target.value)} 
+                            className="w-full text-sm border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent"
+                        />
                     </div>
                 </div>
-                <button onClick={() => { onSave(task.id, { title, goalMinutes: parseInt(minutes), group, project, deadline: new Date(deadlineDate).getTime() }); onClose(); }} className="w-full py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">保存更改</button>
-            </div>
-        </div>
-    );
-};
 
-const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit, hideTitle }) => {
-    const [offsetX, setOffsetX] = useState(0);
-    const progress = Math.min((task.completedMinutes / task.goalMinutes) * 100, 100);
-    return (
-        <div className="relative w-full mb-3 select-none overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-shadow bg-white h-[88px]">
-            <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-6 rounded-xl"><Trash2 className="text-white" size={24} /></div>
-            <div className="absolute inset-0 bg-white rounded-xl border border-gray-100 flex z-10 transition-transform duration-200 overflow-hidden"
-                style={{ transform: `translateX(${offsetX}px)` }}
-                onTouchMove={(e) => { const diff = e.touches[0].clientX - e.currentTarget.getBoundingClientRect().x; if(diff < 0) setOffsetX(Math.max(diff, -100)); }}
-                onTouchEnd={() => setOffsetX(offsetX < -50 ? -80 : 0)}
-                onClick={() => offsetX < -10 ? setOffsetX(0) : onClick(task.id)}
-            >
-                <div className={`w-1.5 h-full ${task.color}`}></div>
-                <div className="flex-1 flex justify-between items-center p-3 pl-4 min-w-0">
-                    <div className="flex-1 pr-3 min-w-0 flex flex-col justify-center h-full">
-                        <h3 className={`font-bold text-base text-gray-900 truncate transition-all ${hideTitle ? 'blur-sm select-none opacity-50' : ''}`}>{hideTitle ? 'Secret Task' : task.title}</h3>
-                        <p className={`text-xs text-gray-400 font-medium truncate mt-0.5 transition-all ${hideTitle ? 'opacity-0' : 'opacity-100'}`}>{task.project || 'Manual'} • {task.group || 'General'}</p>
-                        <div className="flex items-center gap-3 text-xs mt-1.5 text-gray-400 font-mono">
-                            <span className={task.completedMinutes >= task.goalMinutes ? 'text-green-600 font-bold' : ''}>{Math.round(task.completedMinutes)} / {task.goalMinutes} m</span>
-                            <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1 hover:bg-gray-100 rounded text-gray-300 hover:text-indigo-600 transition-colors"><Pencil size={12}/></button>
-                        </div>
-                    </div>
-                    <button className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${task.color} text-white shrink-0 hover:scale-105 active:scale-95 transition-transform`}><Play fill="currentColor" size={14} className="ml-0.5"/></button>
+                {/* 保存按钮 */}
+                <div className="pt-4 flex gap-3">
+                    <button 
+                        onClick={handleSave} 
+                        className="w-full py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors"
+                    >
+                        保存更改
+                    </button>
                 </div>
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-50"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${progress}%` }} /></div>
             </div>
-            {offsetX <= -80 && <button onClick={(e) => {e.stopPropagation(); onDelete(task.id)}} className="absolute right-0 top-0 bottom-0 w-20 z-20"></button>}
         </div>
     );
 };
@@ -327,6 +563,7 @@ export default function JumpStart() {
   const [history, setHistory] = useState({});
   const [user, setUser] = useState(null);
   const [syncStatus, setSyncStatus] = useState('offline');
+  const [newTaskGoal, setNewTaskGoal] = useState('');
 
   // --- UI State ---
   const [activeTaskId, setActiveTaskId] = useState(null);
@@ -485,15 +722,46 @@ export default function JumpStart() {
       createdAt: Date.now(),
       deadline: getDefaultDeadline(),
       group: group,
-      project: 'Manual'
+      project: 'Manual',
+      dailyGoal: newTaskGoal || "Daily Progress",
     };
     const newTasks = [...tasks, newTask];
     setTasks(newTasks);
     saveDataToCloud(newTasks, history);
     setNewTaskInput('');
+    setNewTaskGoal('');
     setIsAddingTask(false);
   };
-
+  const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit, hideTitle }) => {
+    const [offsetX, setOffsetX] = useState(0);
+    const progress = Math.min((task.completedMinutes / task.goalMinutes) * 100, 100);
+    return (
+        <div className="relative w-full mb-3 select-none overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-shadow bg-white h-[88px]">
+            <div className="absolute inset-0 bg-red-500 flex items-center justify-end pr-6 rounded-xl"><Trash2 className="text-white" size={24} /></div>
+            <div className="absolute inset-0 bg-white rounded-xl border border-gray-100 flex z-10 transition-transform duration-200 overflow-hidden"
+                style={{ transform: `translateX(${offsetX}px)` }}
+                onTouchMove={(e) => { const diff = e.touches[0].clientX - e.currentTarget.getBoundingClientRect().x; if(diff < 0) setOffsetX(Math.max(diff, -100)); }}
+                onTouchEnd={() => setOffsetX(offsetX < -50 ? -80 : 0)}
+                onClick={() => offsetX < -10 ? setOffsetX(0) : onClick(task.id)}
+            >
+                <div className={`w-1.5 h-full ${task.color}`}></div>
+                <div className="flex-1 flex justify-between items-center p-3 pl-4 min-w-0">
+                    <div className="flex-1 pr-3 min-w-0 flex flex-col justify-center h-full">
+                        <h3 className={`font-bold text-base text-gray-900 truncate transition-all ${hideTitle ? 'blur-sm select-none opacity-50' : ''}`}>{hideTitle ? 'Secret Task' : task.title}</h3>
+                        <p className={`text-xs text-gray-400 font-medium truncate transition-all ${hideTitle ? 'opacity-0' : 'opacity-100'}`}>{task.dailyGoal || 'Manual'} • {task.group || 'General'}</p>
+                        <div className="flex items-center gap-3 text-xs text-gray-400 font-mono">
+                            <span className={task.completedMinutes >= task.goalMinutes ? 'text-green-600 font-bold' : ''}>{Math.round(task.completedMinutes)} / {task.goalMinutes} m</span>
+                            <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-1 hover:bg-gray-100 rounded text-gray-300 hover:text-indigo-600 transition-colors"><Pencil size={12}/></button>
+                        </div>
+                    </div>
+                    <button className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm bg-gray-500 text-white shrink-0 hover:scale-105 active:scale-95 transition-transform`}><Play fill="currentColor" size={14} className="ml-0.5"/></button>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-50"><div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${progress}%` }} /></div>
+            </div>
+            {offsetX <= -80 && <button onClick={(e) => {e.stopPropagation(); onDelete(task.id)}} className="absolute right-0 top-0 bottom-0 w-20 z-20"></button>}
+        </div>
+    );
+};
   const handleUpdateTask = (id, updates) => {
       const newTasks = tasks.map(t => t.id === id ? { ...t, ...updates } : t);
       setTasks(newTasks);
@@ -629,6 +897,16 @@ export default function JumpStart() {
               <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-4">
                   <textarea autoFocus rows={3} placeholder="输入任务... (例如: 读书 45m #学习)" className="w-full bg-transparent outline-none text-base mb-4 font-mono" value={newTaskInput} onChange={(e) => setNewTaskInput(e.target.value)} />
                   <div className="flex gap-2 justify-between items-center">
+                      <div className="flex items-center gap-2 mb-4 text-gray-500 border-b border-gray-200 pb-1">
+                        <Target size={14} />
+                        <input 
+                            type="text" 
+                            placeholder="今日具体目标 (例如: 看完第3章)" 
+                            className="w-full bg-transparent outline-none text-sm" 
+                            value={newTaskGoal} 
+                            onChange={(e) => setNewTaskGoal(e.target.value)} 
+                        />
+                    </div>
                       <button onClick={generateSmartPlan} disabled={!newTaskInput.trim() || isGeneratingPlan} className={`flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-lg transition-colors ${!newTaskInput.trim() ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'}`}>{isGeneratingPlan ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14} />} 智能导入</button>
                       <div className="flex gap-2">
                         <button onClick={() => setIsAddingTask(false)} className="px-3 py-2 text-gray-500 text-xs font-bold">取消</button>
@@ -643,7 +921,7 @@ export default function JumpStart() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex justify-center pb-20">
+    <div className="fixed inset-0 bg-gray-50 text-gray-900 font-sans flex justify-center">
       {editingTask && <EditTaskModal task={editingTask} onClose={() => setEditingTask(null)} onSave={handleUpdateTask} />}
       {activeTaskId && (
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
@@ -682,7 +960,7 @@ export default function JumpStart() {
             <div className="flex justify-between items-center mb-2">
                 <div>
                     <h1 className="text-2xl font-extrabold tracking-tight text-gray-900 flex items-center gap-2">
-                        JumpStart <span className="text-blue-600">.</span>
+                        JustStart <span className="text-blue-600">.</span>
                         <button onClick={() => setHideTitles(!hideTitles)} className="text-gray-400 hover:text-gray-600 transition-colors ml-1">
                             {hideTitles ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
