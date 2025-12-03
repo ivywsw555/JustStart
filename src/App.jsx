@@ -72,61 +72,61 @@ const getDefaultDeadline = (offsetDays = 90) => {
     return d.getTime();
 };
 
-const INITIAL_TASKS = [];
-// const INITIAL_TASKS = [
-//     {
-//         id: 1,
-//         title: 'LeetCode 算法刷题',
-//         dailyGoal: "攻克动态规划 (DP) 难关",
-//         goalMinutes: 60,
-//         completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
-//         color: 'bg-blue-500',
-//         status: 'active',
-//         createdAt: Date.now(),
-//         deadline: getDefaultDeadline(30),
-//         group: 'Algorithm',
-//         project: 'Interview Prep'
-//     },
-//     {
-//         id: 2,
-//         title: 'System Design 学习',
-//         dailyGoal: "看完 Alex Xu 第 5 章",
-//         goalMinutes: 45,
-//         completedMinutes: 20, // 进行中
-//         color: 'bg-indigo-500',
-//         status: 'active',
-//         createdAt: Date.now(),
-//         deadline: getDefaultDeadline(14),
-//         group: 'Architecture',
-//         project: 'Interview Prep'
-//     },
-//     {
-//         id: 3,
-//         title: 'React 源码阅读',
-//         dailyGoal: "理解 Fiber 架构",
-//         goalMinutes: 90,
-//         completedMinutes: 0, // 未开始
-//         color: 'bg-emerald-500',
-//         status: 'active',
-//         createdAt: Date.now(),
-//         deadline: getDefaultDeadline(60),
-//         group: 'Frontend',
-//         project: 'Skill Up'
-//     },
-//     {
-//         id: 4,
-//         title: '旧的英语计划',
-//         dailyGoal: "背单词",
-//         goalMinutes: 20,
-//         completedMinutes: 200,
-//         color: 'bg-amber-500',
-//         status: 'archived', // 已归档 (在管理页面显示)
-//         createdAt: Date.now(),
-//         deadline: getDefaultDeadline(-5), // 已过期
-//         group: 'Vocabulary',
-//         project: 'English'
-//     }
-// ];
+// const INITIAL_TASKS = [];
+const INITIAL_TASKS = [
+    {
+        id: 1,
+        title: 'LeetCode 算法刷题',
+        dailyGoal: "攻克动态规划 (DP) 难关",
+        goalMinutes: 60,
+        completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
+        color: 'bg-blue-500',
+        status: 'active',
+        createdAt: Date.now(),
+        deadline: getDefaultDeadline(30),
+        group: 'Algorithm',
+        project: 'Interview Prep'
+    },
+    {
+        id: 2,
+        title: 'System Design 学习',
+        dailyGoal: "看完 Alex Xu 第 5 章",
+        goalMinutes: 45,
+        completedMinutes: 20, // 进行中
+        color: 'bg-indigo-500',
+        status: 'active',
+        createdAt: Date.now(),
+        deadline: getDefaultDeadline(14),
+        group: 'Architecture',
+        project: 'Interview Prep'
+    },
+    {
+        id: 3,
+        title: 'React 源码阅读',
+        dailyGoal: "理解 Fiber 架构",
+        goalMinutes: 90,
+        completedMinutes: 0, // 未开始
+        color: 'bg-emerald-500',
+        status: 'active',
+        createdAt: Date.now(),
+        deadline: getDefaultDeadline(60),
+        group: 'Frontend',
+        project: 'Skill Up'
+    },
+    {
+        id: 4,
+        title: '旧的英语计划',
+        dailyGoal: "背单词",
+        goalMinutes: 20,
+        completedMinutes: 200,
+        color: 'bg-amber-500',
+        status: 'archived', // 已归档 (在管理页面显示)
+        createdAt: Date.now(),
+        deadline: getDefaultDeadline(-5), // 已过期
+        group: 'Vocabulary',
+        project: 'English'
+    }
+];
 const FocusParticleCanvas = ({ progress }) => {
     const canvasRef = useRef(null);
 
@@ -165,13 +165,13 @@ const FocusParticleCanvas = ({ progress }) => {
                 this.y = centerY + Math.sin(angle) * radius;
 
                 // 极其缓慢的漂浮速度
-                this.vx = (Math.random() - 0.5) * 0.3;
-                this.vy = (Math.random() - 0.5) * 0.3;
+                this.vx = (Math.random() - 0.5) * 0.1;
+                this.vy = (Math.random() - 0.5) * 0.1;
 
                 this.size = Math.random() * 2; // 粒子大小
                 this.alpha = Math.random() * 0.5; // 初始透明度
                 this.targetAlpha = Math.random() * 0.8; // 目标透明度（用于闪烁）
-                this.flickerSpeed = 0.01 + Math.random() * 0.02; // 闪烁速度
+                this.flickerSpeed = 0.001 + Math.random() * 0.01; // 闪烁速度
             }
 
             update() {
@@ -186,7 +186,6 @@ const FocusParticleCanvas = ({ progress }) => {
                     this.alpha -= this.flickerSpeed;
                     if (this.alpha <= 0.1) {
                         this.targetAlpha = Math.random() * 0.8; // 变暗后随机变亮
-                        // 如果粒子跑太远或看不见了，重置位置
                         if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
                             this.init();
                         }
@@ -227,12 +226,12 @@ const FocusParticleCanvas = ({ progress }) => {
             const breath = (Math.sin(time) + 1) / 10;
 
             // 基础光晕大小随进度(progress)增加，随呼吸(breath)波动
-            const baseRadius = 30 + (progress * 300);
+            const baseRadius = 30 + (progress * 100);
             const pulseRadius = baseRadius + (breath * 20);
 
             // 3. 绘制外层柔光 (Warm Halo)
             const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, pulseRadius * 2);
-            gradient.addColorStop(0, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, ${0.15 + breath * 0.05})`); // 中心稍亮
+            gradient.addColorStop(0, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, ${0.30 + breath * 0.05})`); // 中心稍亮
             gradient.addColorStop(0.5, `rgba(${baseColor.r}, ${baseColor.g}, ${baseColor.b}, ${0.05})`); // 中间衰减
             gradient.addColorStop(1, 'rgba(0,0,0,0)'); // 边缘透明
 
@@ -1171,22 +1170,51 @@ export default function JumpStart() {
             {manualRecordTask && <ManualRecordModal task={manualRecordTask} onClose={() => setManualRecordTask(null)} onSave={handleManualRecord} />}
             {isAdHocLogOpen && <AdHocLogModal onClose={() => setIsAdHocLogOpen(false)} onSave={handleAdHocLog} />}
             {activeTaskId && (
-                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
+                <div className="fixed inset-0 z-50 flex flex-col items-center bg-black">
                     <FocusParticleCanvas progress={0.5} />
-                    <div className="relative z-10 text-center text-white">
-                        <h1 className={`text-4xl font-bold mb-8 transition-all ${hideTitles ? 'blur-md' : ''}`}>{hideTitles ? 'Current Task' : tasks.find(t => t.id === activeTaskId)?.title}</h1>
-                        <div className="text-8xl font-mono mb-4">
-                            {(() => {
-                                const task = tasks.find(t => t.id === activeTaskId);
-                                if (!task) return "00:00";
-                                const totalSeconds = (task.completedMinutes * 60) + timerSeconds;
-                                return formatTime(totalSeconds);
-                            })()}
+
+                    <div className="relative z-10 flex flex-col items-center justify-between w-full h-full p-6">
+
+                        <div className="flex-1 flex items-center justify-center w-full">
+                            <h1 className={`text-5xl md:text-6xl font-bold text-white/90 tracking-tight text-center max-w-4xl transition-all duration-500 ${hideTitles ? 'blur-lg opacity-0' : ''}`}>
+                                {hideTitles ? 'Current Task' : tasks.find(t => t.id === activeTaskId)?.title}
+                            </h1>
                         </div>
-                        <div className="text-white/50 text-sm mb-12 font-mono">
-                            Current Session: {formatTime(timerSeconds)}
+
+                        <div className="flex flex-col items-center justify-end pb-12 md:pb-20 space-y-6">
+
+                            <button
+                                onClick={() => handleTaskClick(activeTaskId)}
+                                className="group relative flex flex-col items-center focus:outline-none transition-transform active:scale-95"
+                                aria-label="Toggle Timer"
+                            >
+                                <div className={`
+                                        text-5xl md:text-7xl font-mono font-medium tracking-wider tabular-nums 
+                                        transition-all duration-300 ease-out
+                                        cursor-pointer select-none
+                                        
+                                        text-white/50 
+                                        
+                                        group-hover:text-white group-hover:scale-105 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]
+                                    `}>
+                                    {(() => {
+                                        const task = tasks.find(t => t.id === activeTaskId);
+                                        if (!task) return "00:00";
+                                        const totalSeconds = (task.completedMinutes * 60) + timerSeconds;
+                                        return formatTime(totalSeconds);
+                                    })()}
+                                </div>
+
+                                <span className="absolute -bottom-6 text-[10px] text-white/0 group-hover:text-white/30 transition-all duration-300 font-sans tracking-widest uppercase">
+                                    Click to Pause
+                                </span>
+                            </button>
+
+                            <div className="text-white/30 text-sm md:text-base font-mono uppercase tracking-widest select-none">
+                                Current Session: {formatTime(timerSeconds)}
+                            </div>
+
                         </div>
-                        <button onClick={() => handleTaskClick(activeTaskId)} className="bg-white text-black p-6 rounded-full"><Pause size={32} /></button>
                     </div>
                 </div>
             )}
