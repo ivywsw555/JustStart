@@ -79,61 +79,61 @@ const getDefaultDeadline = (offsetDays = 90) => {
     return d.getTime();
 };
 
-// const INITIAL_TASKS = []; 
-const INITIAL_TASKS = [
-    {
-        id: 1,
-        title: 'LeetCode 算法刷题',
-        dailyGoal: "攻克动态规划 (DP) 难关",
-        goalMinutes: 60,
-        completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
-        color: 'bg-blue-500',
-        status: 'active',
-        createdAt: Date.now(),
-        deadline: getDefaultDeadline(30),
-        group: 'Algorithm',
-        project: 'Interview Prep'
-    },
-    {
-        id: 2,
-        title: 'System Design 学习',
-        dailyGoal: "看完 Alex Xu 第 5 章",
-        goalMinutes: 45,
-        completedMinutes: 20, // 进行中
-        color: 'bg-indigo-500',
-        status: 'active',
-        createdAt: Date.now(),
-        deadline: getDefaultDeadline(14),
-        group: 'Architecture',
-        project: 'Interview Prep'
-    },
-    {
-        id: 3,
-        title: 'React 源码阅读',
-        dailyGoal: "理解 Fiber 架构",
-        goalMinutes: 90,
-        completedMinutes: 0, // 未开始
-        color: 'bg-emerald-500',
-        status: 'active',
-        createdAt: Date.now(),
-        deadline: getDefaultDeadline(60),
-        group: 'Frontend',
-        project: 'Skill Up'
-    },
-    {
-        id: 4,
-        title: '旧的英语计划',
-        dailyGoal: "背单词",
-        goalMinutes: 20,
-        completedMinutes: 200,
-        color: 'bg-amber-500',
-        status: 'archived', // 已归档 (在管理页面显示)
-        createdAt: Date.now(),
-        deadline: getDefaultDeadline(-5), // 已过期
-        group: 'Vocabulary',
-        project: 'English'
-    }
-];
+const INITIAL_TASKS = [];
+// const INITIAL_TASKS = [
+//     {
+//         id: 1,
+//         title: 'LeetCode 算法刷题',
+//         dailyGoal: "攻克动态规划 (DP) 难关",
+//         goalMinutes: 60,
+//         completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
+//         color: 'bg-blue-500',
+//         status: 'active',
+//         createdAt: Date.now(),
+//         deadline: getDefaultDeadline(30),
+//         group: 'Algorithm',
+//         project: 'Interview Prep'
+//     },
+//     {
+//         id: 2,
+//         title: 'System Design 学习',
+//         dailyGoal: "看完 Alex Xu 第 5 章",
+//         goalMinutes: 45,
+//         completedMinutes: 20, // 进行中
+//         color: 'bg-indigo-500',
+//         status: 'active',
+//         createdAt: Date.now(),
+//         deadline: getDefaultDeadline(14),
+//         group: 'Architecture',
+//         project: 'Interview Prep'
+//     },
+//     {
+//         id: 3,
+//         title: 'React 源码阅读',
+//         dailyGoal: "理解 Fiber 架构",
+//         goalMinutes: 90,
+//         completedMinutes: 0, // 未开始
+//         color: 'bg-emerald-500',
+//         status: 'active',
+//         createdAt: Date.now(),
+//         deadline: getDefaultDeadline(60),
+//         group: 'Frontend',
+//         project: 'Skill Up'
+//     },
+//     {
+//         id: 4,
+//         title: '旧的英语计划',
+//         dailyGoal: "背单词",
+//         goalMinutes: 20,
+//         completedMinutes: 200,
+//         color: 'bg-amber-500',
+//         status: 'archived', // 已归档 (在管理页面显示)
+//         createdAt: Date.now(),
+//         deadline: getDefaultDeadline(-5), // 已过期
+//         group: 'Vocabulary',
+//         project: 'English'
+//     }
+// ];
 const FocusParticleCanvas = ({ progress }) => {
     const canvasRef = useRef(null);
 
