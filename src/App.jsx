@@ -789,7 +789,7 @@ export default function JumpStart() {
 
         const handleSave = () => {
             const mins = parseInt(minutes);
-            if (mins && mins > 0) {
+            if (mins) {
                 onSave(task.id, mins * 60);
                 onClose();
             }
@@ -917,11 +917,9 @@ export default function JumpStart() {
     const saveSession = (taskId, seconds) => {
         const minutesToAdd = seconds / 60;
 
-        // 1. Update Task Lifetime Total (Optional, but good for stats)
         const newTasks = tasks.map(t => {
             if (t.id === taskId) {
-                // We keep 'completedMinutes' locally or use 'totalMinutes' for clarity.
-                // Let's use 'totalMinutes' for lifetime accumulation to avoid confusion.
+
                 const currentTotal = t.totalMinutes || t.completedMinutes || 0;
                 return { ...t, totalMinutes: currentTotal + minutesToAdd };
             }
