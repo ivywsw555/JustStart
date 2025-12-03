@@ -231,10 +231,10 @@ const FocusParticleCanvas = ({ progress }) => {
 
             // --- 核心逻辑：呼吸灯效果 ---
             // 使用正弦波模拟呼吸：(sin(t) + 1) / 2 产生 0 到 1 的平滑波动
-            const breath = (Math.sin(time) + 1) / 20;
+            const breath = (Math.sin(time) + 1) / 10;
 
             // 基础光晕大小随进度(progress)增加，随呼吸(breath)波动
-            const baseRadius = 30 + (progress * 100);
+            const baseRadius = 30 + (progress * 300);
             const pulseRadius = baseRadius + (breath * 20);
 
             // 3. 绘制外层柔光 (Warm Halo)
