@@ -1026,9 +1026,11 @@ export default function JumpStart() {
     const getTaskTodayMinutes = (taskId) => {
         const today = getTodayString();
         const dayRecords = history[today] || [];
-        return dayRecords
-            .filter(r => r.taskId === taskId)
-            .reduce((acc, curr) => acc + curr.minutes, 0);
+       const total = dayRecords
+        .filter(r => r.taskId === taskId)
+        .reduce((acc, curr) => acc + curr.minutes, 0);
+
+        return Math.max(0, total);
     };
 
     // --- Render Functions ---
