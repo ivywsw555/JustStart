@@ -79,61 +79,61 @@ const getDefaultDeadline = (offsetDays = 90) => {
     return d.getTime();
 };
 
-const INITIAL_TASKS = []; 
-// const INITIAL_TASKS = [
-//   { 
-//     id: 1, 
-//     title: 'LeetCode 算法刷题', 
-//     dailyGoal: "攻克动态规划 (DP) 难关", 
-//     goalMinutes: 60, 
-//     completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
-//     color: 'bg-blue-500', 
-//     status: 'active', 
-//     createdAt: Date.now(), 
-//     deadline: getDefaultDeadline(30), 
-//     group: 'Algorithm', 
-//     project: 'Interview Prep' 
-//   },
-//   { 
-//     id: 2, 
-//     title: 'System Design 学习', 
-//     dailyGoal: "看完 Alex Xu 第 5 章", 
-//     goalMinutes: 45, 
-//     completedMinutes: 20, // 进行中
-//     color: 'bg-indigo-500', 
-//     status: 'active', 
-//     createdAt: Date.now(), 
-//     deadline: getDefaultDeadline(14), 
-//     group: 'Architecture', 
-//     project: 'Interview Prep' 
-//   },
-//   { 
-//     id: 3, 
-//     title: 'React 源码阅读', 
-//     dailyGoal: "理解 Fiber 架构", 
-//     goalMinutes: 90, 
-//     completedMinutes: 0, // 未开始
-//     color: 'bg-emerald-500', 
-//     status: 'active', 
-//     createdAt: Date.now(), 
-//     deadline: getDefaultDeadline(60), 
-//     group: 'Frontend', 
-//     project: 'Skill Up' 
-//   },
-//   { 
-//     id: 4, 
-//     title: '旧的英语计划', 
-//     dailyGoal: "背单词", 
-//     goalMinutes: 20, 
-//     completedMinutes: 200, 
-//     color: 'bg-amber-500', 
-//     status: 'archived', // 已归档 (在管理页面显示)
-//     createdAt: Date.now(), 
-//     deadline: getDefaultDeadline(-5), // 已过期
-//     group: 'Vocabulary', 
-//     project: 'English' 
-//   }
-// ];
+// const INITIAL_TASKS = []; 
+const INITIAL_TASKS = [
+  { 
+    id: 1, 
+    title: 'LeetCode 算法刷题', 
+    dailyGoal: "攻克动态规划 (DP) 难关", 
+    goalMinutes: 60, 
+    completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
+    color: 'bg-blue-500', 
+    status: 'active', 
+    createdAt: Date.now(), 
+    deadline: getDefaultDeadline(30), 
+    group: 'Algorithm', 
+    project: 'Interview Prep' 
+  },
+  { 
+    id: 2, 
+    title: 'System Design 学习', 
+    dailyGoal: "看完 Alex Xu 第 5 章", 
+    goalMinutes: 45, 
+    completedMinutes: 20, // 进行中
+    color: 'bg-indigo-500', 
+    status: 'active', 
+    createdAt: Date.now(), 
+    deadline: getDefaultDeadline(14), 
+    group: 'Architecture', 
+    project: 'Interview Prep' 
+  },
+  { 
+    id: 3, 
+    title: 'React 源码阅读', 
+    dailyGoal: "理解 Fiber 架构", 
+    goalMinutes: 90, 
+    completedMinutes: 0, // 未开始
+    color: 'bg-emerald-500', 
+    status: 'active', 
+    createdAt: Date.now(), 
+    deadline: getDefaultDeadline(60), 
+    group: 'Frontend', 
+    project: 'Skill Up' 
+  },
+  { 
+    id: 4, 
+    title: '旧的英语计划', 
+    dailyGoal: "背单词", 
+    goalMinutes: 20, 
+    completedMinutes: 200, 
+    color: 'bg-amber-500', 
+    status: 'archived', // 已归档 (在管理页面显示)
+    createdAt: Date.now(), 
+    deadline: getDefaultDeadline(-5), // 已过期
+    group: 'Vocabulary', 
+    project: 'English' 
+  }
+];
 const FocusParticleCanvas = ({ progress }) => {
     const canvasRef = useRef(null);
 
@@ -570,6 +570,10 @@ export default function JumpStart() {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [viewMode, setViewMode] = useState('dashboard');
   const [editingTask, setEditingTask] = useState(null);
+  const [manualRecordTask, setManualRecordTask] = useState(null);
+  const [isAdHocLogOpen, setIsAdHocLogOpen] = useState(false);
+
+
   const [aiMessage, setAiMessage] = useState("AI 助手就绪...");
   const [newTaskInput, setNewTaskInput] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -732,6 +736,101 @@ export default function JumpStart() {
     setNewTaskGoal('');
     setIsAddingTask(false);
   };
+
+  const AdHocLogModal = ({ onClose, onSave }) => {
+    const [title, setTitle] = useState('');
+    const [minutes, setMinutes] = useState('');
+
+    const handleSave = () => {
+        const mins = parseInt(minutes);
+        if (title.trim() && mins && mins > 0) {
+            onSave(title, mins * 60); 
+            onClose();
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6">
+                <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    {/* <History size={24} /> */}
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">补录任意活动</h3>
+                <p className="text-gray-500 text-sm mb-6 text-center">做了列表里没有的事情？记录下来，也是一种成就。</p>
+                
+                <div className="space-y-4 mb-6">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">做了什么?</label>
+                        <input 
+                            autoFocus
+                            type="text" 
+                            placeholder="例如: 帮同事Debug, 读了会书..."
+                            value={title} 
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="w-full text-lg font-medium border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">多久? (分钟)</label>
+                        <input 
+                            type="number" 
+                            placeholder="0"
+                            value={minutes} 
+                            onChange={(e) => setMinutes(e.target.value)}
+                            className="w-full text-lg font-mono font-bold text-gray-900 border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3 text-gray-500 font-medium hover:bg-gray-50 rounded-xl transition-colors">取消</button>
+                    <button onClick={handleSave} className="flex-1 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">确认记录</button>
+                </div>
+            </div>
+        </div>
+    );
+  };
+
+  const ManualRecordModal = ({ task, onClose, onSave }) => {
+      const [minutes, setMinutes] = useState('');
+
+      const handleSave = () => {
+          const mins = parseInt(minutes);
+          if (mins && mins > 0) {
+              onSave(task.id, mins * 60); 
+              onClose();
+          }
+      };
+
+      return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6 text-center">
+                  <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Clock size={24} />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">补录时长</h3>
+                  <p className="text-gray-500 text-sm mb-6">为 "{task.title}" 补充记录时间。</p>
+                  
+                  <div className="flex justify-center items-baseline gap-2 mb-8">
+                      <input 
+                          autoFocus
+                          type="number" 
+                          placeholder="0"
+                          value={minutes} 
+                          onChange={(e) => setMinutes(e.target.value)}
+                          className="w-24 text-center text-4xl font-mono font-bold text-indigo-600 border-b-2 border-gray-200 focus:border-indigo-600 outline-none py-1 bg-transparent"
+                      />
+                      <span className="text-gray-400 font-medium">分钟</span>
+                  </div>
+
+                  <div className="flex gap-3">
+                      <button onClick={onClose} className="flex-1 py-3 text-gray-500 font-medium hover:bg-gray-50 rounded-xl transition-colors">取消</button>
+                      <button onClick={handleSave} className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors">确认</button>
+                  </div>
+              </div>
+          </div>
+      );
+  };
   const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit, hideTitle }) => {
     const [offsetX, setOffsetX] = useState(0);
     const progress = Math.min((task.completedMinutes / task.goalMinutes) * 100, 100);
@@ -768,7 +867,38 @@ export default function JumpStart() {
       saveDataToCloud(newTasks, history);
       setEditingTask(null);
   };
+ const handleManualRecord = (id, seconds) => {
+      saveSession(id, seconds);
+  };
 
+  // NEW: Log ad-hoc activity directly to history
+  const handleAdHocLog = (title, seconds) => {
+      const minutesToAdd = seconds / 60;
+      const today = getTodayString();
+      
+      // Also check if this matches an existing task title, if so, update that task too!
+      const existingTask = tasks.find(t => t.title === title);
+      if (existingTask) {
+          setTasks(prev => prev.map(t => {
+              if (t.id === existingTask.id) return { ...t, completedMinutes: t.completedMinutes + minutesToAdd };
+              return t;
+          }));
+      }
+
+      setHistory(prev => {
+          const dayRecords = prev[today] || [];
+          return {
+              ...prev,
+              [today]: [...dayRecords, {
+                  taskId: existingTask ? existingTask.id : `adhoc-${Date.now()}`,
+                  title: title,
+                  minutes: minutesToAdd,
+                  timestamp: Date.now(),
+                  color: existingTask ? existingTask.color : 'bg-amber-500' // Default color for ad-hoc
+              }]
+          };
+      });
+  };
   const handleArchiveTask = (id) => {
       if(confirm('归档后任务将移至"管理"列表。确定吗？')) {
           const newTasks = tasks.map(t => t.id === id ? { ...t, status: 'archived' } : t);
@@ -808,7 +938,10 @@ export default function JumpStart() {
     if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
-
+  const getTodayString = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
   // --- Render Functions ---
   const renderTaskManagement = () => {
       const activeTasks = tasks.filter(t => t.status !== 'archived');
@@ -891,22 +1024,23 @@ export default function JumpStart() {
               </div>
           )}
           {tasks.filter(t => t.status !== 'archived').map(task => (
-              <SwipeableTaskItem key={task.id} task={task} onClick={handleTaskClick} onEdit={setEditingTask} onDelete={handleArchiveTask} hideTitle={hideTitles} />
+              <SwipeableTaskItem key={task.id} task={task} onClick={handleTaskClick} onEdit={setEditingTask} onDelete={handleArchiveTask} hideTitle={hideTitles}  onManualRecord={setManualRecordTask} 
+                            />
           ))}
           {isAddingTask ? (
               <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-4">
                   <textarea autoFocus rows={3} placeholder="输入任务... (例如: 读书 45m #学习)" className="w-full bg-transparent outline-none text-base mb-4 font-mono" value={newTaskInput} onChange={(e) => setNewTaskInput(e.target.value)} />
-                  <div className="flex gap-2 justify-between items-center">
-                      <div className="flex items-center gap-2 mb-4 text-gray-500 border-b border-gray-200 pb-1">
-                        <Target size={14} />
-                        <input 
-                            type="text" 
-                            placeholder="今日具体目标 (例如: 看完第3章)" 
-                            className="w-full bg-transparent outline-none text-sm" 
-                            value={newTaskGoal} 
-                            onChange={(e) => setNewTaskGoal(e.target.value)} 
-                        />
+                    <div className="flex items-center gap-2 mb-4 text-gray-500 border-b border-gray-200 pb-1">
+                      {/* <Target size={14} /> */}
+                      <input 
+                          type="text" 
+                          placeholder="今日具体目标 (例如: 看完第3章)" 
+                          className="w-full bg-transparent outline-none text-sm" 
+                          value={newTaskGoal} 
+                          onChange={(e) => setNewTaskGoal(e.target.value)} 
+                      />
                     </div>
+                  <div className="flex gap-2 justify-between items-center">
                       <button onClick={generateSmartPlan} disabled={!newTaskInput.trim() || isGeneratingPlan} className={`flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-lg transition-colors ${!newTaskInput.trim() ? 'opacity-50 cursor-not-allowed text-gray-400' : 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100'}`}>{isGeneratingPlan ? <Loader2 size={14} className="animate-spin"/> : <Sparkles size={14} />} 智能导入</button>
                       <div className="flex gap-2">
                         <button onClick={() => setIsAddingTask(false)} className="px-3 py-2 text-gray-500 text-xs font-bold">取消</button>
@@ -915,7 +1049,21 @@ export default function JumpStart() {
                   </div>
               </div>
           ) : (
-              <button onClick={() => setIsAddingTask(true)} className="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 flex items-center justify-center gap-2 hover:bg-gray-50"><Plus size={20} /> 添加 / 导入计划</button>
+              <div className="flex gap-3">
+                <button 
+                    onClick={() => setIsAddingTask(true)} 
+                    className="flex-1 py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 flex items-center justify-center gap-2 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                >
+                    <Plus size={20} /> 添加新目标
+                </button>
+                <button 
+                    onClick={() => setIsAdHocLogOpen(true)}
+                    className="w-16 py-4 border-2 border-dashed border-amber-100 bg-amber-50 rounded-2xl text-amber-500 flex items-center justify-center gap-2 hover:bg-amber-100 hover:border-amber-200 transition-colors tooltip"
+                    title="补录任意活动"
+                >
+                    <Clock size={20} />
+                </button>
+            </div>          
           )}
       </div>
   );
@@ -923,6 +1071,8 @@ export default function JumpStart() {
   return (
     <div className="fixed inset-0 bg-gray-50 text-gray-900 font-sans flex justify-center">
       {editingTask && <EditTaskModal task={editingTask} onClose={() => setEditingTask(null)} onSave={handleUpdateTask} />}
+      {manualRecordTask && <ManualRecordModal task={manualRecordTask} onClose={() => setManualRecordTask(null)} onSave={handleManualRecord} />}
+      {isAdHocLogOpen && <AdHocLogModal onClose={() => setIsAdHocLogOpen(false)} onSave={handleAdHocLog} />}
       {activeTaskId && (
           <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black">
               <FocusParticleCanvas progress={0.5} />
