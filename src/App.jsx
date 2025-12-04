@@ -422,10 +422,13 @@ const CalendarView = ({ history, exportData, onManualRecord }) => {
     const firstDay = new Date(year, month, 1).getDay();
     const changeMonth = (delta) => setCurrentDate(new Date(year, month + delta, 1));
 
-    // Helper to get array of tasks for a date from the Map structure
     const getRecordsForDate = (dateStr) => {
         const dayMap = history[dateStr];
-        return dayMap ? Object.values(dayMap) : [];
+        if (!dayMap) return [];
+        return Object.entries(dayMap).map(([key, val]) => ({
+            ...val,
+            taskId: key
+        }));
     };
 
     const getIntensityClass = (minutes) => {
@@ -489,7 +492,7 @@ const CalendarView = ({ history, exportData, onManualRecord }) => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => onManualRecord({ id: record.taskId, title: record.title })}
+                                        onClick={() => onManualRecord({ id: record.taskId, title: record.title }, selectedDate)}
                                         className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
                                         title="补录"
                                     >
@@ -509,6 +512,7 @@ const CalendarView = ({ history, exportData, onManualRecord }) => {
 export default function JumpStart() {
     // --- Data State ---
     const [tasks, setTasks] = useState(INITIAL_TASKS);
+    const [manualRecordDate, setManualRecordDate] = useState(null);
     const [history, setHistory] = useState({});
 
     // const [history, setHistory] = useState({
@@ -921,7 +925,8 @@ export default function JumpStart() {
         saveDataToCloud(newTasks, history);
         setEditingTask(null);
     };
-    const saveSession = (taskId, seconds) => {
+
+    const saveSession = (taskId, seconds, dateStr = null) => {
         const minutesToAdd = seconds / 60;
 
         const newTasks = tasks.map(t => {
@@ -933,12 +938,16 @@ export default function JumpStart() {
         });
 
         const task = tasks.find(t => t.id === taskId);
-        const today = getTodayString();
-        const safeHistory = history || {};
-        const dayRecords = safeHistory[today] || {};
 
-        const existingRecord = dayRecords[taskId] || {
-            title: task ? task.title : 'Unknown',
+        const targetDate = dateStr || getTodayString();
+
+        const safeHistory = history || {};
+        const dayRecords = safeHistory[targetDate] || {};
+
+        const recordId = taskId || 'unknown-task';
+
+        const existingRecord = dayRecords[recordId] || {
+            title: task ? task.title : 'Unknown Task',
             minutes: 0,
             color: task ? task.color : 'bg-gray-500',
             dailyGoal: task ? task.dailyGoal : '',
@@ -953,9 +962,9 @@ export default function JumpStart() {
 
         const newHistory = {
             ...safeHistory,
-            [today]: {
+            [targetDate]: {
                 ...dayRecords,
-                [taskId]: updatedRecord
+                [recordId]: updatedRecord
             }
         };
 
@@ -963,8 +972,10 @@ export default function JumpStart() {
         setHistory(newHistory);
         saveDataToCloud(newTasks, newHistory);
     };
+
     const handleManualRecord = (id, seconds) => {
-        saveSession(id, seconds);
+        saveSession(id, seconds, manualRecordDate);
+        setManualRecordDate(null);
     };
 
     const handleAdHocLog = (title, seconds, didDate) => {
@@ -1326,7 +1337,10 @@ export default function JumpStart() {
                 <main className="flex-1 px-6 py-6 overflow-y-auto">
                     {viewMode === 'dashboard' && renderDashboard()}
                     {viewMode === 'tasks' && renderTaskManagement()}
-                    {viewMode === 'calendar' && <CalendarView history={history} exportData={exportData} onManualRecord={setManualRecordTask} />}
+                    {viewMode === 'calendar' && <CalendarView history={history} exportData={exportData} onManualRecord={(task, date) => {
+                        setManualRecordTask(task);
+                        setManualRecordDate(date);
+                    }} />}
 
                 </main>
 
