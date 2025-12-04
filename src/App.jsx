@@ -72,61 +72,61 @@ const getDefaultDeadline = (offsetDays = 90) => {
     return d.getTime();
 };
 
-const INITIAL_TASKS = [];
-// const INITIAL_TASKS = [
-//     {
-//         id: 1,
-//         title: 'LeetCode 算法刷题',
-//         dailyGoal: "攻克动态规划 (DP) 难关",
-//         goalMinutes: 60,
-//         completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
-//         color: 'bg-blue-500',
-//         status: 'active',
-//         createdAt: Date.now(),
-//         deadline: getDefaultDeadline(30),
-//         group: 'Algorithm',
-//         project: 'Interview Prep'
-//     },
-//     {
-//         id: 2,
-//         title: 'System Design 学习',
-//         dailyGoal: "看完 Alex Xu 第 5 章",
-//         goalMinutes: 45,
-//         completedMinutes: 20, // 进行中
-//         color: 'bg-indigo-500',
-//         status: 'active',
-//         createdAt: Date.now(),
-//         deadline: getDefaultDeadline(14),
-//         group: 'Architecture',
-//         project: 'Interview Prep'
-//     },
-//     {
-//         id: 3,
-//         title: 'React 源码阅读',
-//         dailyGoal: "理解 Fiber 架构",
-//         goalMinutes: 90,
-//         completedMinutes: 0, // 未开始
-//         color: 'bg-emerald-500',
-//         status: 'active',
-//         createdAt: Date.now(),
-//         deadline: getDefaultDeadline(60),
-//         group: 'Frontend',
-//         project: 'Skill Up'
-//     },
-//     {
-//         id: 4,
-//         title: '旧的英语计划',
-//         dailyGoal: "背单词",
-//         goalMinutes: 20,
-//         completedMinutes: 200,
-//         color: 'bg-amber-500',
-//         status: 'archived', // 已归档 (在管理页面显示)
-//         createdAt: Date.now(),
-//         deadline: getDefaultDeadline(-5), // 已过期
-//         group: 'Vocabulary',
-//         project: 'English'
-//     }
-// ];
+// const INITIAL_TASKS = [];
+const INITIAL_TASKS = [
+    {
+        id: 1,
+        title: 'LeetCode 算法刷题',
+        dailyGoal: "攻克动态规划 (DP) 难关",
+        goalMinutes: 60,
+        completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
+        color: 'bg-blue-500',
+        status: 'active',
+        createdAt: Date.now(),
+        deadline: getDefaultDeadline(30),
+        group: 'Algorithm',
+        project: 'Interview Prep'
+    },
+    {
+        id: 2,
+        title: 'System Design 学习',
+        dailyGoal: "看完 Alex Xu 第 5 章",
+        goalMinutes: 45,
+        completedMinutes: 20, // 进行中
+        color: 'bg-indigo-500',
+        status: 'active',
+        createdAt: Date.now(),
+        deadline: getDefaultDeadline(14),
+        group: 'Architecture',
+        project: 'Interview Prep'
+    },
+    {
+        id: 3,
+        title: 'React 源码阅读',
+        dailyGoal: "理解 Fiber 架构",
+        goalMinutes: 90,
+        completedMinutes: 0, // 未开始
+        color: 'bg-emerald-500',
+        status: 'active',
+        createdAt: Date.now(),
+        deadline: getDefaultDeadline(60),
+        group: 'Frontend',
+        project: 'Skill Up'
+    },
+    {
+        id: 4,
+        title: '旧的英语计划',
+        dailyGoal: "背单词",
+        goalMinutes: 20,
+        completedMinutes: 200,
+        color: 'bg-amber-500',
+        status: 'archived', // 已归档 (在管理页面显示)
+        createdAt: Date.now(),
+        deadline: getDefaultDeadline(-5), // 已过期
+        group: 'Vocabulary',
+        project: 'English'
+    }
+];
 const FocusParticleCanvas = ({ progress }) => {
     const canvasRef = useRef(null);
 
@@ -413,133 +413,90 @@ const EditTaskModal = ({ task, onClose, onSave }) => {
     );
 };
 
-// --- 🔥 Heatmap Calendar Component ---
-const CalendarView = ({ history, exportData }) => {
+const CalendarView = ({ history, exportData, onManualRecord }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
-
+    const firstDay = new Date(year, month, 1).getDay();
     const changeMonth = (delta) => setCurrentDate(new Date(year, month + delta, 1));
 
-    // Get color intensity based on minutes
-    const getIntensityClass = (minutes) => {
-        if (!minutes || minutes === 0) return 'bg-gray-50 text-gray-400';
-        if (minutes < 30) return 'bg-emerald-100 text-emerald-800'; // Lite
-        if (minutes < 60) return 'bg-emerald-300 text-emerald-900'; // Medium
-        if (minutes < 120) return 'bg-emerald-500 text-white font-bold'; // Heavy
-        return 'bg-emerald-700 text-white font-bold'; // Intense
+    // Helper to get array of tasks for a date from the Map structure
+    const getRecordsForDate = (dateStr) => {
+        const dayMap = history[dateStr];
+        return dayMap ? Object.values(dayMap) : [];
     };
 
-    // Calculate details for the selected date
-    const selectedDayData = history[selectedDate] || [];
-    const totalMinutes = selectedDayData.reduce((acc, curr) => acc + curr.minutes, 0);
+    const getIntensityClass = (minutes) => {
+        if (!minutes || minutes === 0) return 'bg-gray-50 text-gray-400';
+        if (minutes < 30) return 'bg-emerald-100 text-emerald-800';
+        if (minutes < 60) return 'bg-emerald-300 text-emerald-900';
+        if (minutes < 120) return 'bg-emerald-500 text-white font-bold';
+        return 'bg-emerald-700 text-white font-bold';
+    };
 
-    // Aggregate tasks for the list below
-    const aggregated = selectedDayData.reduce((acc, curr) => {
-        if (!acc[curr.title]) acc[curr.title] = { minutes: 0, color: curr.color };
-        acc[curr.title].minutes += curr.minutes;
-        return acc;
-    }, {});
+    const selectedDayRecords = getRecordsForDate(selectedDate);
+    const totalMinutes = selectedDayRecords.reduce((acc, curr) => acc + curr.minutes, 0);
 
     return (
         <div className="animate-fade-in pb-20">
-            {/* Header & Export */}
             <div className="flex justify-between items-center mb-6 px-2">
                 <h2 className="text-xl font-bold text-gray-900">专注热力图</h2>
-                <button
-                    onClick={exportData}
-                    className="flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
-                >
-                    <Download size={14} /> 备份数据
-                </button>
+                <button onClick={exportData} className="flex items-center gap-1 text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"><Download size={14} /> 备份数据</button>
             </div>
-
-            {/* Calendar Grid Card */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
-                {/* Month Navigation */}
                 <div className="flex justify-between items-center mb-4 px-1">
                     <button onClick={() => changeMonth(-1)} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500"><ChevronLeft size={20} /></button>
                     <h3 className="font-bold text-base text-gray-800">{year}年 {month + 1}月</h3>
                     <button onClick={() => changeMonth(1)} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500"><ChevronRight size={20} /></button>
                 </div>
-
-                {/* Weekday Headers */}
                 <div className="grid grid-cols-7 gap-1 text-center mb-1">
-                    {['日', '一', '二', '三', '四', '五', '六'].map(d => (
-                        <div key={d} className="text-[10px] font-bold text-gray-400 uppercase py-2">{d}</div>
-                    ))}
+                    {['日', '一', '二', '三', '四', '五', '六'].map(d => (<div key={d} className="text-[10px] font-bold text-gray-400 uppercase py-2">{d}</div>))}
                 </div>
-
-                {/* Days Grid */}
                 <div className="grid grid-cols-7 gap-1.5">
-                    {/* Empty slots for previous month */}
                     {Array(firstDay).fill(null).map((_, i) => <div key={`empty-${i}`} />)}
-
-                    {/* Actual Days */}
                     {[...Array(daysInMonth).keys()].map(i => {
                         const day = i + 1;
                         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                        const dayMins = (history[dateStr] || []).reduce((a, c) => a + c.minutes, 0);
+                        const dayRecords = getRecordsForDate(dateStr);
+                        const dayMins = dayRecords.reduce((a, c) => a + c.minutes, 0);
                         const isSelected = dateStr === selectedDate;
                         const colorClass = getIntensityClass(dayMins);
-
-                        return (
-                            <div
-                                key={day}
-                                onClick={() => setSelectedDate(dateStr)}
-                                className={`
-                                    aspect-square flex items-center justify-center rounded-lg text-xs cursor-pointer transition-all duration-200
-                                    ${colorClass}
-                                    ${isSelected ? 'ring-2 ring-black ring-offset-1 scale-105 shadow-md z-10' : 'hover:opacity-80'}
-                                `}
-                            >
-                                {day}
-                            </div>
-                        )
+                        return (<div key={day} onClick={() => setSelectedDate(dateStr)} className={`aspect-square flex items-center justify-center rounded-lg text-xs cursor-pointer transition-all duration-200 ${colorClass} ${isSelected ? 'ring-2 ring-black ring-offset-1 scale-105 shadow-md z-10' : 'hover:opacity-80'}`}>{day}</div>)
                     })}
                 </div>
-
-                {/* Legend */}
-                <div className="flex items-center justify-end gap-2 mt-4 text-[10px] text-gray-400 font-medium">
-                    <span>Less</span>
-                    <div className="w-3 h-3 rounded bg-emerald-100"></div>
-                    <div className="w-3 h-3 rounded bg-emerald-300"></div>
-                    <div className="w-3 h-3 rounded bg-emerald-500"></div>
-                    <div className="w-3 h-3 rounded bg-emerald-700"></div>
-                    <span>More</span>
-                </div>
+                <div className="flex items-center justify-end gap-2 mt-4 text-[10px] text-gray-400 font-medium"><span>Less</span><div className="w-3 h-3 rounded bg-emerald-100"></div><div className="w-3 h-3 rounded bg-emerald-300"></div><div className="w-3 h-3 rounded bg-emerald-500"></div><div className="w-3 h-3 rounded bg-emerald-700"></div><span>More</span></div>
             </div>
-
-            {/* Selected Day Details */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                 <div className="flex justify-between items-end mb-4 border-b border-gray-100 pb-3">
-                    <div>
-                        <p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-0.5">{selectedDate}</p>
-                        <h3 className="text-2xl font-bold text-gray-900">
-                            {Math.round(totalMinutes)} <span className="text-sm font-normal text-gray-500">分钟</span>
-                        </h3>
-                    </div>
+                    <div><p className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-0.5">{selectedDate}</p><h3 className="text-2xl font-bold text-gray-900">{Math.round(totalMinutes)} <span className="text-sm font-normal text-gray-500">分钟</span></h3></div>
                     {totalMinutes > 0 && <div className="p-2 bg-emerald-50 text-emerald-600 rounded-full"><Sparkles size={18} /></div>}
                 </div>
-
                 <div className="space-y-3">
-                    {Object.keys(aggregated).length === 0 ? (
-                        <div className="text-center py-6 text-gray-400 text-sm">
-                            <Coffee size={24} className="mx-auto mb-2 opacity-50" />
-                            这一天没有记录，注意休息哦。
-                        </div>
+                    {selectedDayRecords.length === 0 ? (
+                        <div className="text-center py-6 text-gray-400 text-sm"><Coffee size={24} className="mx-auto mb-2 opacity-50" />这一天没有记录，注意休息哦。</div>
                     ) : (
-                        Object.entries(aggregated).map(([title, data]) => (
-                            <div key={title} className="flex items-center justify-between group">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-2.5 h-2.5 rounded-full ${data.color}`}></div>
-                                    <span className="text-sm font-medium text-gray-700 group-hover:text-black transition-colors">{title}</span>
+                        selectedDayRecords.sort((a, b) => b.timestamp - a.timestamp).map((record) => (
+                            <div key={record.taskId || record.title} className="flex items-start justify-between group py-1">
+                                <div className="flex items-start gap-3">
+                                    <div className={`w-2.5 h-2.5 rounded-full mt-1.5 ${record.color}`}></div>
+                                    <div>
+                                        <span className="text-sm font-medium text-gray-700 group-hover:text-black transition-colors block">{record.title}</span>
+                                        {/* Show historical Daily Goal if exists */}
+                                        {record.dailyGoal && <span className="text-xs text-gray-400 block">{record.dailyGoal}</span>}
+                                    </div>
                                 </div>
-                                <span className="text-sm font-mono font-bold text-gray-900 bg-gray-50 px-2 py-0.5 rounded">{Math.round(data.minutes)}m</span>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => onManualRecord({ id: record.taskId, title: record.title })}
+                                        className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
+                                        title="补录"
+                                    >
+                                        <Plus size={14} />
+                                    </button>
+                                    <span className="text-sm font-mono font-bold text-gray-900 bg-gray-50 px-2 py-0.5 rounded h-fit">{Math.round(record.minutes)}m</span>
+                                </div>
                             </div>
                         ))
                     )}
@@ -552,7 +509,23 @@ const CalendarView = ({ history, exportData }) => {
 export default function JumpStart() {
     // --- Data State ---
     const [tasks, setTasks] = useState(INITIAL_TASKS);
-    const [history, setHistory] = useState({});
+    const [history, setHistory] = useState({
+        "2025-12-03": {
+            "1764721165518": {
+                "title": "LeetCode 算法刷题",
+                "minutes": 30,
+                "dailyGoal": "攻克动态规划 (DP)",
+                "color": "bg-blue-500",
+                "timestamp": 1764721165518
+            },
+            "adhoc-123456": {
+                "title": "临时帮同事修电脑",
+                "minutes": 15,
+                "dailyGoal": "突发事件",
+                "color": "bg-amber-500"
+            }
+        }
+    });
     const [user, setUser] = useState(null);
     const [syncStatus, setSyncStatus] = useState('offline');
     const [newTaskGoal, setNewTaskGoal] = useState('');
@@ -609,18 +582,43 @@ export default function JumpStart() {
     useEffect(() => {
         if (!user || !db) return;
         const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
+
         const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
+
                 if (data.tasks) setTasks(data.tasks);
                 if (data.history) setHistory(data.history);
                 setSyncStatus('synced');
+
+                const remoteSession = data.currentSession;
+
+                if (remoteSession && remoteSession.status === 'focusing') {
+                    const now = Date.now();
+                    const elapsedSeconds = Math.floor((now - remoteSession.startTime) / 1000);
+
+                    if (activeTaskId !== remoteSession.taskId || Math.abs(timerSeconds - elapsedSeconds) > 2) {
+                        console.log("Syncing with remote session...");
+                        setActiveTaskId(remoteSession.taskId);
+                        setTimerSeconds(elapsedSeconds);
+                        startTimeRef.current = remoteSession.startTime;
+                    }
+                }
+                else if (!remoteSession && activeTaskId) {
+
+                    console.log("Remote session ended. Stopping local timer.");
+                    setActiveTaskId(null);
+                    setTimerSeconds(0);
+                    setShowSummary(false);
+                }
+
             } else if (tasks.length > 0) {
                 saveDataToCloud(tasks, history);
             }
         }, (error) => { console.warn("Sync error", error); setSyncStatus('offline'); });
+
         return () => unsubscribeSnapshot();
-    }, [user]);
+    }, [user, activeTaskId]);
 
     // --- 3. Save Logic ---
     const saveDataToCloud = useCallback(async (newTasks, newHistory) => {
@@ -651,26 +649,35 @@ export default function JumpStart() {
     }, [activeTaskId]);
 
     const handleTaskClick = (taskId) => {
-    if (activeTaskId === taskId) {
-        try {
-            if (timerSeconds > 5) {
-                saveSession(taskId, timerSeconds);
-                
-                setLastSessionTime(timerSeconds);
-                setShowSummary(true);
+        if (activeTaskId === taskId) {
+            try {
+                const minutesToAdd = timerSeconds / 60;
+                if (minutesToAdd > 0.1) {
+                    saveSession(taskId, timerSeconds);
+
+                    setLastSessionTime(timerSeconds);
+                    setShowSummary(true);
+                }
+                updateSessionInCloud(null);
+            } catch (err) {
+                console.error("Error saving task progress:", err);
+            } finally {
+                setActiveTaskId(null);
+                setTimerSeconds(0);
             }
-        } catch (err) {
-            console.error("Error saving task progress:", err);
-        } finally {
-            setActiveTaskId(null);
+        } else {
             setTimerSeconds(0);
+            setActiveTaskId(taskId);
+            startTimeRef.current = Date.now();
+
+            updateSessionInCloud({
+                taskId: taskId,
+                startTime: Date.now(),
+                status: 'focusing'
+            });
         }
-    } 
-    else {
-        setTimerSeconds(0);
-        setActiveTaskId(taskId);
-    }
-};
+    };
+
     const handleSummaryConfirm = () => { setShowSummary(false); setTimerSeconds(0); };
 
     const handleAiAdvice = async () => { /* AI Logic Omitted */ };
@@ -722,11 +729,12 @@ export default function JumpStart() {
     const AdHocLogModal = ({ onClose, onSave }) => {
         const [title, setTitle] = useState('');
         const [minutes, setMinutes] = useState('');
+        const [didDate, setDidDate] = useState('');
 
         const handleSave = () => {
             const mins = parseInt(minutes);
             if (title.trim() && mins && mins > 0) {
-                onSave(title, mins * 60);
+                onSave(title, mins * 60, didDate);
                 onClose();
             }
         };
@@ -762,6 +770,15 @@ export default function JumpStart() {
                                 className="w-full text-lg font-mono font-bold text-gray-900 border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent"
                             />
                         </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">哪一天?</label>
+                            <input
+                                type="date"
+                                value={didDate}
+                                onChange={(e) => setDidDate(e.target.value)}
+                                className="w-full text-sm border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent"
+                            />
+                        </div>
                     </div>
 
                     <div className="flex gap-3">
@@ -769,7 +786,7 @@ export default function JumpStart() {
                         <button onClick={handleSave} className="flex-1 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">确认记录</button>
                     </div>
                 </div>
-            </div>
+            </div >
         );
     };
 
@@ -903,73 +920,100 @@ export default function JumpStart() {
         setEditingTask(null);
     };
     const saveSession = (taskId, seconds) => {
-    const minutesToAdd = seconds / 60;
-    
-    const newTasks = tasks.map(t => {
-        if (t.id === taskId) {
-            return { ...t, completedMinutes: t.completedMinutes + minutesToAdd };
-        }
-        return t;
-    });
+        const minutesToAdd = seconds / 60;
 
-    const task = tasks.find(t => t.id === taskId);
-    
-    
-    const today = getTodayString(); 
-    
-    const safeHistory = history || {};
-    const dayRecords = safeHistory[today] || [];
-    
-    const newHistory = {
-        ...safeHistory,
-        [today]: [
-            ...dayRecords, 
-            {
-                taskId,
-                title: task ? task.title : 'Unknown',
-                minutes: minutesToAdd,
-                timestamp: Date.now(),
-                color: task ? task.color : 'bg-gray-500'
+        const newTasks = tasks.map(t => {
+            if (t.id === taskId) {
+                const currentTotal = t.totalMinutes || t.completedMinutes || 0;
+                return { ...t, totalMinutes: currentTotal + minutesToAdd };
             }
-        ]
-    };
+            return t;
+        });
 
-    setTasks(newTasks);
-    setHistory(newHistory); 
-    saveDataToCloud(newTasks, newHistory);
-};
+        const task = tasks.find(t => t.id === taskId);
+        const today = getTodayString();
+        const safeHistory = history || {};
+        const dayRecords = safeHistory[today] || {};
+
+        const existingRecord = dayRecords[taskId] || {
+            title: task ? task.title : 'Unknown',
+            minutes: 0,
+            color: task ? task.color : 'bg-gray-500',
+            dailyGoal: task ? task.dailyGoal : '',
+            timestamp: Date.now()
+        };
+
+        const updatedRecord = {
+            ...existingRecord,
+            minutes: existingRecord.minutes + minutesToAdd,
+            timestamp: Date.now()
+        };
+
+        const newHistory = {
+            ...safeHistory,
+            [today]: {
+                ...dayRecords,
+                [taskId]: updatedRecord
+            }
+        };
+
+        setTasks(newTasks);
+        setHistory(newHistory);
+        saveDataToCloud(newTasks, newHistory);
+    };
     const handleManualRecord = (id, seconds) => {
         saveSession(id, seconds);
     };
 
-    // NEW: Log ad-hoc activity directly to history
-    const handleAdHocLog = (title, seconds) => {
+    const handleAdHocLog = (title, seconds, didDate) => {
         const minutesToAdd = seconds / 60;
-        const today = getTodayString();
-
-        // Also check if this matches an existing task title, if so, update that task too!
+        const date = didDate;
         const existingTask = tasks.find(t => t.title === title);
+
+        let newTasks = tasks;
         if (existingTask) {
-            setTasks(prev => prev.map(t => {
-                if (t.id === existingTask.id) return { ...t, completedMinutes: t.completedMinutes + minutesToAdd };
+            newTasks = tasks.map(t => {
+                if (t.id === existingTask.id) {
+                    const currentTotal = t.totalMinutes || t.completedMinutes || 0;
+                    return { ...t, totalMinutes: currentTotal + minutesToAdd };
+                }
                 return t;
-            }));
+            });
+            setTasks(newTasks);
         }
 
-        setHistory(prev => {
-            const dayRecords = prev[today] || [];
-            return {
-                ...prev,
-                [today]: [...dayRecords, {
-                    taskId: existingTask ? existingTask.id : `adhoc-${Date.now()}`,
-                    title: title,
-                    minutes: minutesToAdd,
-                    timestamp: Date.now(),
-                    color: existingTask ? existingTask.color : 'bg-amber-500' // Default color for ad-hoc
-                }]
-            };
-        });
+        const safeHistory = history || {};
+        const dayRecords = safeHistory[date] || {}; // Object
+
+
+        const taskId = existingTask ? existingTask.id : `adhoc-${title.replace(/\s+/g, '-').toLowerCase()}`;
+
+        const existingRecord = dayRecords[taskId] || {
+            title: title,
+            minutes: 0,
+            dailyGoal: 'Ad-hoc Log',
+            color: existingTask ? existingTask.color : 'bg-amber-500',
+            timestamp: Date.now()
+        };
+
+        const updatedRecord = {
+            ...existingRecord,
+            minutes: existingRecord.minutes + minutesToAdd,
+            timestamp: Date.now()
+        };
+
+        const newHistory = {
+            ...safeHistory,
+            [date]: {
+                ...dayRecords,
+                [taskId]: updatedRecord
+            }
+        };
+
+        setHistory(newHistory);
+        saveDataToCloud(newTasks, newHistory);
     };
+
     const handleArchiveTask = (id) => {
         if (confirm('归档后任务将移至"管理"列表。确定吗？')) {
             const newTasks = tasks.map(t => t.id === id ? { ...t, status: 'archived' } : t);
@@ -1016,12 +1060,20 @@ export default function JumpStart() {
 
     const getTaskTodayMinutes = (taskId) => {
         const today = getTodayString();
-        const dayRecords = history[today] || [];
-        const total = dayRecords
-            .filter(r => r.taskId === taskId)
-            .reduce((acc, curr) => acc + curr.minutes, 0);
+        const dayRecords = history[today] || {};
+        const record = dayRecords[taskId];
+        return record ? record.minutes : 0;
+    };
 
-        return Math.max(0, total);
+    const updateSessionInCloud = async (sessionData) => {
+        if (!user || !db) return;
+        try {
+            const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'data', 'main');
+
+            await setDoc(userDocRef, { currentSession: sessionData }, { merge: true });
+        } catch (e) {
+            console.error("Failed to update cloud session:", e);
+        }
     };
 
     // --- Render Functions ---
@@ -1183,15 +1235,15 @@ export default function JumpStart() {
                                     Today: {formatTime(getTaskTodayMinutes(activeTaskId || '') * 60 + timerSeconds)}
                                 </div>
                                 <div className={`
-                                        mt-3
-                                        text-5xl md:text-7xl font-mono font-medium tracking-wider tabular-nums 
-                                        transition-all duration-300 ease-out
-                                        cursor-pointer select-none
-                                        
-                                        text-white/50 
-                                        
-                                        group-hover:text-white group-hover:scale-105 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]
-                                    `}>
+                                    mt-3
+                                    text-5xl md:text-7xl font-mono font-medium tracking-wider tabular-nums 
+                                    transition-all duration-300 ease-out
+                                    cursor-pointer select-none
+                                    
+                                    text-white/50 
+                                    
+                                    group-hover:text-white group-hover:scale-105 group-hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]
+                                `}>
                                     {(() => {
                                         const task = tasks.find(t => t.id === activeTaskId);
                                         if (!task) return "00:00";
@@ -1272,7 +1324,8 @@ export default function JumpStart() {
                 <main className="flex-1 px-6 py-6 overflow-y-auto">
                     {viewMode === 'dashboard' && renderDashboard()}
                     {viewMode === 'tasks' && renderTaskManagement()}
-                    {viewMode === 'calendar' && <CalendarView history={history} exportData={exportData} />}
+                    {viewMode === 'calendar' && <CalendarView history={history} exportData={exportData} onManualRecord={setManualRecordTask} />}
+
                 </main>
 
                 <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-around items-center z-40 pb-6">
