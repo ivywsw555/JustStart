@@ -72,61 +72,61 @@ const getDefaultDeadline = (offsetDays = 90) => {
     return d.getTime();
 };
 
-// const INITIAL_TASKS = [];
-const INITIAL_TASKS = [
-    {
-        id: 1,
-        title: 'LeetCode 算法刷题',
-        dailyGoal: "攻克动态规划 (DP) 难关",
-        goalMinutes: 60,
-        completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
-        color: 'bg-blue-500',
-        status: 'active',
-        createdAt: Date.now(),
-        deadline: getDefaultDeadline(30),
-        group: 'Algorithm',
-        project: 'Interview Prep'
-    },
-    {
-        id: 2,
-        title: 'System Design 学习',
-        dailyGoal: "看完 Alex Xu 第 5 章",
-        goalMinutes: 45,
-        completedMinutes: 20, // 进行中
-        color: 'bg-indigo-500',
-        status: 'active',
-        createdAt: Date.now(),
-        deadline: getDefaultDeadline(14),
-        group: 'Architecture',
-        project: 'Interview Prep'
-    },
-    {
-        id: 3,
-        title: 'React 源码阅读',
-        dailyGoal: "理解 Fiber 架构",
-        goalMinutes: 90,
-        completedMinutes: 0, // 未开始
-        color: 'bg-emerald-500',
-        status: 'active',
-        createdAt: Date.now(),
-        deadline: getDefaultDeadline(60),
-        group: 'Frontend',
-        project: 'Skill Up'
-    },
-    {
-        id: 4,
-        title: '旧的英语计划',
-        dailyGoal: "背单词",
-        goalMinutes: 20,
-        completedMinutes: 200,
-        color: 'bg-amber-500',
-        status: 'archived', // 已归档 (在管理页面显示)
-        createdAt: Date.now(),
-        deadline: getDefaultDeadline(-5), // 已过期
-        group: 'Vocabulary',
-        project: 'English'
-    }
-];
+const INITIAL_TASKS = [];
+// const INITIAL_TASKS = [
+//     {
+//         id: 1,
+//         title: 'LeetCode 算法刷题',
+//         dailyGoal: "攻克动态规划 (DP) 难关",
+//         goalMinutes: 60,
+//         completedMinutes: 65, // 已达标 (绿色对勾 + 亮色目标)
+//         color: 'bg-blue-500',
+//         status: 'active',
+//         createdAt: Date.now(),
+//         deadline: getDefaultDeadline(30),
+//         group: 'Algorithm',
+//         project: 'Interview Prep'
+//     },
+//     {
+//         id: 2,
+//         title: 'System Design 学习',
+//         dailyGoal: "看完 Alex Xu 第 5 章",
+//         goalMinutes: 45,
+//         completedMinutes: 20, // 进行中
+//         color: 'bg-indigo-500',
+//         status: 'active',
+//         createdAt: Date.now(),
+//         deadline: getDefaultDeadline(14),
+//         group: 'Architecture',
+//         project: 'Interview Prep'
+//     },
+//     {
+//         id: 3,
+//         title: 'React 源码阅读',
+//         dailyGoal: "理解 Fiber 架构",
+//         goalMinutes: 90,
+//         completedMinutes: 0, // 未开始
+//         color: 'bg-emerald-500',
+//         status: 'active',
+//         createdAt: Date.now(),
+//         deadline: getDefaultDeadline(60),
+//         group: 'Frontend',
+//         project: 'Skill Up'
+//     },
+//     {
+//         id: 4,
+//         title: '旧的英语计划',
+//         dailyGoal: "背单词",
+//         goalMinutes: 20,
+//         completedMinutes: 200,
+//         color: 'bg-amber-500',
+//         status: 'archived', // 已归档 (在管理页面显示)
+//         createdAt: Date.now(),
+//         deadline: getDefaultDeadline(-5), // 已过期
+//         group: 'Vocabulary',
+//         project: 'English'
+//     }
+// ];
 const FocusParticleCanvas = ({ progress }) => {
     const canvasRef = useRef(null);
 
@@ -509,23 +509,25 @@ const CalendarView = ({ history, exportData, onManualRecord }) => {
 export default function JumpStart() {
     // --- Data State ---
     const [tasks, setTasks] = useState(INITIAL_TASKS);
-    const [history, setHistory] = useState({
-        "2025-12-03": {
-            "1764721165518": {
-                "title": "LeetCode 算法刷题",
-                "minutes": 30,
-                "dailyGoal": "攻克动态规划 (DP)",
-                "color": "bg-blue-500",
-                "timestamp": 1764721165518
-            },
-            "adhoc-123456": {
-                "title": "临时帮同事修电脑",
-                "minutes": 15,
-                "dailyGoal": "突发事件",
-                "color": "bg-amber-500"
-            }
-        }
-    });
+    const [history, setHistory] = useState({});
+
+    // const [history, setHistory] = useState({
+    //     "2025-12-03": {
+    //         "1764721165518": {
+    //             "title": "LeetCode 算法刷题",
+    //             "minutes": 30,
+    //             "dailyGoal": "攻克动态规划 (DP)",
+    //             "color": "bg-blue-500",
+    //             "timestamp": 1764721165518
+    //         },
+    //         "adhoc-123456": {
+    //             "title": "临时帮同事修电脑",
+    //             "minutes": 15,
+    //             "dailyGoal": "突发事件",
+    //             "color": "bg-amber-500"
+    //         }
+    //     }
+    // });
     const [user, setUser] = useState(null);
     const [syncStatus, setSyncStatus] = useState('offline');
     const [newTaskGoal, setNewTaskGoal] = useState('');
