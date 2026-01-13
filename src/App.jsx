@@ -1084,11 +1084,12 @@ export default function JumpStart() {
         setManualRecordDate(null);
     };
 
-    const handleAdHocLog = (title, seconds, didDate, contextProject) => {
+        const handleAdHocLog = (title, seconds, didDate, contextProject) => {
         const minutesToAdd = seconds / 60;
         const date = didDate || getTodayString();
         const existingTask = tasks.find(t => t.title === title);
         
+        // 1. Update Lifetime stats if matching task found
         let newTasks = tasks;
         if (existingTask) {
             newTasks = tasks.map(t => {
@@ -1115,18 +1116,27 @@ export default function JumpStart() {
 
         const taskId = existingTask ? existingTask.id : `adhoc-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
+        // [MODIFIED] Ensure existing records also get project info updated if context provided
         const existingRecord = dayRecords[taskId] || {
             title: title,
             minutes: 0,
             dailyGoal: 'Ad-hoc Log',
-            project: existingTask ? existingTask.project : (contextProject || 'Manual'),
             color: existingTask ? existingTask.color : 'bg-amber-500',
             timestamp: Date.now()
         };
+        
+        // Determine the project to save. 
+        // Logic: 
+        // 1. If it's an existing task, use its project (to keep consistency).
+        // 2. If a specific contextProject was passed (from "Add Entry" in journal), use that.
+        // 3. If the record already had a project, keep it.
+        // 4. Default to 'Manual'.
+        const targetProject = existingTask ? existingTask.project : (contextProject || existingRecord.project || 'Manual');
 
         const updatedRecord = {
             ...existingRecord,
             minutes: existingRecord.minutes + minutesToAdd,
+            project: targetProject, // Force update project to ensure visibility
             timestamp: Date.now()
         };
 
