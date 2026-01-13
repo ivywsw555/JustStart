@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Plus, Trash2, Brain, CheckCircle, ChevronRight, ChevronLeft, Shuffle, Coffee, Sparkles, Loader2, Calendar as CalendarIcon, ArrowLeft, Pencil, X, Download, LogIn, LogOut, User, Cloud, LayoutList, Timer, Archive, Clock, Layers, ChevronDown, ChevronUp, Server, Check, CloudOff, Eye, EyeOff } from 'lucide-react';
+import { Play, Pause, Plus, Trash2, Brain, CheckCircle, ChevronRight, ChevronLeft, Shuffle, Coffee, Sparkles, Loader2, Calendar as CalendarIcon, ArrowLeft, Pencil, X, Download, LogIn, LogOut, User, Cloud, LayoutList, Timer, Archive, Clock, Layers, ChevronDown, ChevronUp, Server, Check, CloudOff, Eye, EyeOff, History, ClipboardList, BookOpen } from 'lucide-react';
 
 // --- Firebase Imports ---
 import { initializeApp } from "firebase/app";
@@ -543,6 +543,7 @@ export default function JumpStart() {
     const [editingTask, setEditingTask] = useState(null);
     const [manualRecordTask, setManualRecordTask] = useState(null);
     const [isAdHocLogOpen, setIsAdHocLogOpen] = useState(false);
+    const [viewingProject, setViewingProject] = useState(null); // New state for Project Journal
 
 
     const [aiMessage, setAiMessage] = useState("AI 助手就绪...");
@@ -733,68 +734,55 @@ export default function JumpStart() {
     };
 
     const AdHocLogModal = ({ onClose, onSave }) => {
-        const [title, setTitle] = useState('');
-        const [minutes, setMinutes] = useState('');
-        const [didDate, setDidDate] = useState('');
+    const [title, setTitle] = useState('');
+    const [minutes, setMinutes] = useState('');
+    // Added date selection state
+    const [didDate, setDidDate] = useState(() => {
+        return new Date().toISOString().split('T')[0];
+    });
 
-        const handleSave = () => {
-            const mins = parseInt(minutes);
-            if (title.trim() && mins && mins > 0) {
-                onSave(title, mins * 60, didDate);
-                onClose();
-            }
-        };
-
-        return (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-                <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6">
-                    <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        {/* <History size={24} /> */}
+    const handleSave = () => {
+        const mins = parseInt(minutes);
+        if (title.trim() && mins && mins !== 0) { 
+            onSave(title, mins * 60, didDate); // Pass date to save function
+            onClose(); 
+        }
+    };
+    // Increased z-index to z-[80] to appear above ProjectJournalModal (z-[70])
+    return (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+            <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+                <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <ClipboardList size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">补录任意活动</h3>
+                <p className="text-gray-500 text-sm mb-6 text-center">做了列表里没有的事情？或者需要修正时间？</p>
+                <div className="space-y-4 mb-6">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">做了什么?</label>
+                        <input autoFocus type="text" placeholder="例如: 帮同事Debug, 读了会书..." value={title} onChange={(e) => setTitle(e.target.value)} className="w-full text-lg font-medium border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">补录任意活动</h3>
-                    <p className="text-gray-500 text-sm mb-6 text-center">做了列表里没有的事情？记录下来，也是一种成就。</p>
-
-                    <div className="space-y-4 mb-6">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">做了什么?</label>
-                            <input
-                                autoFocus
-                                type="text"
-                                placeholder="例如: 帮同事Debug, 读了会书..."
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="w-full text-lg font-medium border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">多久? (分钟)</label>
-                            <input
-                                type="number"
-                                placeholder="0"
-                                value={minutes}
-                                onChange={(e) => setMinutes(e.target.value)}
-                                className="w-full text-lg font-mono font-bold text-gray-900 border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">哪一天?</label>
-                            <input
-                                type="date"
-                                value={didDate}
-                                onChange={(e) => setDidDate(e.target.value)}
-                                className="w-full text-sm border-b-2 border-gray-200 focus:border-black outline-none py-1 bg-transparent"
-                            />
-                        </div>
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">多久? (分钟, 可负数)</label>
+                        <input type="number" placeholder="0" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-full text-lg font-mono font-bold text-gray-900 border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent" />
                     </div>
-
-                    <div className="flex gap-3">
-                        <button onClick={onClose} className="flex-1 py-3 text-gray-500 font-medium hover:bg-gray-50 rounded-xl transition-colors">取消</button>
-                        <button onClick={handleSave} className="flex-1 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">确认记录</button>
+                    {/* Date Picker Input */}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">哪一天?</label>
+                        <input 
+                            type="date" 
+                            value={didDate} 
+                            onChange={(e) => setDidDate(e.target.value)} 
+                            className="w-full text-sm font-medium border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent" 
+                        />
                     </div>
                 </div>
-            </div >
-        );
-    };
+                <div className="flex gap-3"><button onClick={onClose} className="flex-1 py-3 text-gray-500 font-medium hover:bg-gray-50 rounded-xl transition-colors">取消</button><button onClick={handleSave} className="flex-1 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">确认记录</button></div>
+            </div>
+        </div>
+    );
+};
+
 
     const ManualRecordModal = ({ task, onClose, onSave }) => {
         const [minutes, setMinutes] = useState('');
@@ -836,6 +824,108 @@ export default function JumpStart() {
             </div>
         );
     };
+
+    const ProjectJournalModal = ({ project, tasks, history, onClose, onUpdateHistory, onAddEntry }) => {
+        const taskIds = tasks.map(t => t.id);
+        
+        // Group history by date for this project
+        const projectHistory = Object.entries(history).reduce((acc, [date, dayRecords]) => {
+            // Filter records that match any task in this project
+            // Note: dayRecords is an Object { taskId: record }
+            const relevantRecords = Object.values(dayRecords).filter(r => taskIds.includes(r.taskId));
+            if (relevantRecords.length > 0) {
+                acc[date] = relevantRecords;
+            }
+            return acc;
+        }, {});
+
+        const sortedDates = Object.keys(projectHistory).sort((a, b) => new Date(b) - new Date(a));
+
+        return (
+            <div className="fixed inset-0 z-[70] bg-white flex flex-col animate-slide-in-right">
+                {/* Header */}
+                <div className="px-4 pt-12 pb-4 border-b border-gray-100 flex items-center justify-between bg-white/90 backdrop-blur-md sticky top-0 z-10">
+                    <div className="flex items-center gap-3">
+                        <button onClick={onClose} className="p-2 -ml-2 hover:bg-gray-50 rounded-full text-gray-600"><ArrowLeft size={24}/></button>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 leading-none">{project}</h2>
+                            <p className="text-xs text-indigo-500 font-medium mt-1">项目日志 & 复盘</p>
+                        </div>
+                    </div>
+                    {/* Added 'Add Entry' Button in Header */}
+                    <button 
+                        onClick={onAddEntry}
+                        className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
+                        title="补录记录"
+                    >
+                        <Plus size={20} />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
+                    {sortedDates.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
+                            <BookOpen size={48} className="opacity-20" />
+                            <p className="text-sm">暂无历史记录，开始行动吧！</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-8 pb-20">
+                            {sortedDates.map(date => (
+                                <div key={date} className="relative pl-4 border-l-2 border-indigo-200">
+                                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4 border-indigo-200"></div>
+                                    <h3 className="text-sm font-bold text-indigo-900 mb-4 bg-indigo-50 inline-block px-2 py-1 rounded-md">{date}</h3>
+                                    
+                                    <div className="space-y-4">
+                                        {projectHistory[date].map(record => (
+                                            <div key={record.taskId} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-800 text-base">{record.title}</h4>
+                                                        <div className="flex flex-wrap gap-2 mt-2">
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-indigo-50 text-indigo-700">
+                                                                <Clock size={10} className="mr-1"/> {Math.round(record.minutes)}m
+                                                            </span>
+                                                            {record.dailyGoal && (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
+                                                                    🎯 {record.dailyGoal}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Journal Input Area */}
+                                                <div className="relative group">
+                                                    <div className="absolute top-3 left-3 text-gray-300 pointer-events-none">
+                                                        <Pencil size={14} />
+                                                    </div>
+                                                    <textarea 
+                                                        className="w-full bg-gray-50 hover:bg-white focus:bg-white text-sm text-gray-700 rounded-xl p-3 pl-9 outline-none border border-transparent focus:border-indigo-200 transition-all resize-none placeholder-gray-400"
+                                                        rows={2}
+                                                        placeholder="记录实际完成情况或心得..."
+                                                        defaultValue={record.journal || ''}
+                                                        onBlur={(e) => {
+                                                            const newVal = e.target.value;
+                                                            if (newVal !== record.journal) {
+                                                                onUpdateHistory(date, record.taskId, { journal: newVal });
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+
     const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit, hideTitle, onManualRecord, todayMinutes }) => {
         const [offsetX, setOffsetX] = useState(0);
         const [isDragging, setIsDragging] = useState(false);
@@ -1026,7 +1116,23 @@ export default function JumpStart() {
         setHistory(newHistory);
         saveDataToCloud(newTasks, newHistory);
     };
+    const handleUpdateHistoryRecord = (date, taskId, updates) => {
+        setHistory(prev => {
+            const dayRecords = prev[date] || {};
+            const record = dayRecords[taskId];
+            if (!record) return prev; // Should exist
 
+            const newHistory = {
+                ...prev,
+                [date]: {
+                    ...dayRecords,
+                    [taskId]: { ...record, ...updates }
+                }
+            };
+            saveDataToCloud(tasks, newHistory); 
+            return newHistory;
+        });
+    };
     const handleArchiveTask = (id) => {
         if (confirm('归档后任务将移至"管理"列表。确定吗？')) {
             const newTasks = tasks.map(t => t.id === id ? { ...t, status: 'archived' } : t);
@@ -1107,30 +1213,34 @@ export default function JumpStart() {
                 <h2 className="text-xl font-bold text-gray-900 px-2">项目概览</h2>
                 {Object.entries(groupedTasks).map(([project, groups]) => (
                     <div key={project} className="space-y-3">
-                        <div className="flex items-center justify-between px-2 cursor-pointer hover:bg-gray-50 rounded-lg py-1">
+                        <div 
+                            className="flex items-center justify-between px-2 cursor-pointer hover:bg-gray-50 rounded-lg py-1 transition-colors"
+                            onClick={() => {
+                                // Get ALL tasks for this project across all groups
+                                const projectTasks = Object.values(groups).flat();
+                                setViewingProject({ name: project, tasks: projectTasks });
+                            }}
+                        >
                             <h3 className={`text-lg font-bold text-indigo-900 flex items-center gap-2 transition-all ${hideTitles ? 'blur-sm select-none' : ''}`}>
                                 <Layers size={18} /> {hideTitles ? '******' : project}
                             </h3>
-                            <ChevronUp size={16} />
+                            <ChevronRight size={16} className="text-indigo-300" />
                         </div>
                         {Object.entries(groups).map(([groupName, groupTasks]) => (
                             <div key={groupName} className="pl-4 border-l-2 border-indigo-100 ml-2">
-                                <h4 className={`text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2 transition-all ${hideTitles ? 'blur-sm select-none' : ''}`}>
-                                    {hideTitles ? '***' : groupName}
-                                </h4>
+                                <h4 className={`text-xs font-bold text-indigo-400 uppercase tracking-wider mb-2 transition-all ${hideTitles ? 'blur-sm select-none' : ''}`}>{hideTitles ? '***' : groupName}</h4>
                                 <div className="space-y-2">
                                     {groupTasks.map(t => {
                                         const daysLeft = Math.ceil(((t.deadline || Date.now()) - Date.now()) / (1000 * 60 * 60 * 24));
                                         const isExpired = daysLeft < 0;
+                                        const lifetimeMins = t.totalMinutes || t.completedMinutes || 0;
                                         return (
                                             <div key={t.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
                                                 <div className="overflow-hidden">
-                                                    <h4 className={`font-bold text-gray-800 truncate transition-all ${hideTitles ? 'blur-sm select-none' : ''}`}>
-                                                        {hideTitles ? 'Secret Task' : t.title}
-                                                    </h4>
+                                                    <h4 className={`font-bold text-gray-800 truncate transition-all ${hideTitles ? 'blur-sm select-none' : ''}`}>{hideTitles ? 'Secret Task' : t.title}</h4>
                                                     <div className="flex gap-2 text-[10px] mt-1">
                                                         <span className={`px-1.5 py-0.5 rounded ${isExpired ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{isExpired ? 'Expired' : `${daysLeft}d left`}</span>
-                                                        <span className="text-gray-400">{Math.round(t.completedMinutes)} / {t.goalMinutes}m</span>
+                                                        <span className="text-gray-400">Total: {Math.round(lifetimeMins)}m</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-1 shrink-0">
@@ -1225,6 +1335,16 @@ export default function JumpStart() {
             {editingTask && <EditTaskModal task={editingTask} onClose={() => setEditingTask(null)} onSave={handleUpdateTask} />}
             {manualRecordTask && <ManualRecordModal task={manualRecordTask} onClose={() => setManualRecordTask(null)} onSave={handleManualRecord} />}
             {isAdHocLogOpen && <AdHocLogModal onClose={() => setIsAdHocLogOpen(false)} onSave={handleAdHocLog} />}
+            {viewingProject && (
+                <ProjectJournalModal 
+                    project={viewingProject.name} 
+                    tasks={viewingProject.tasks} 
+                    history={history} 
+                    onClose={() => setViewingProject(null)} 
+                    onUpdateHistory={handleUpdateHistoryRecord} 
+                    onAddEntry={() => setIsAdHocLogOpen(true)}
+                />
+            )}
             {activeTaskId && (
                 <div className="fixed inset-0 z-50 flex flex-col items-center bg-black">
                     <FocusParticleCanvas progress={0.5} />
