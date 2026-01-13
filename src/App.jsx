@@ -1025,7 +1025,7 @@ export default function JumpStart() {
         setEditingTask(null);
     };
 
-    const saveSession = (taskId, seconds, dateStr = null) => {
+    const saveSession = (taskId, seconds) => {
         const minutesToAdd = seconds / 60;
 
         const newTasks = tasks.map(t => {
@@ -1037,33 +1037,39 @@ export default function JumpStart() {
         });
 
         const task = tasks.find(t => t.id === taskId);
-
-        const targetDate = dateStr || getTodayString();
-
+        const today = getTodayString();
         const safeHistory = history || {};
-        const dayRecords = safeHistory[targetDate] || {};
+        let dayRecords = safeHistory[today] || {}; 
 
-        const recordId = taskId || 'unknown-task';
+        // [MODIFIED] Auto-migration: Check if dayRecords is an Array, if so, convert to Object map
+        if (Array.isArray(dayRecords)) {
+            const recordsMap = {};
+            dayRecords.forEach(rec => {
+                if(rec.taskId) recordsMap[rec.taskId] = rec;
+            });
+            dayRecords = recordsMap;
+        }
 
-        const existingRecord = dayRecords[recordId] || {
-            title: task ? task.title : 'Unknown Task',
+        const existingRecord = dayRecords[taskId] || {
+            title: task ? task.title : 'Unknown',
             minutes: 0,
             color: task ? task.color : 'bg-gray-500',
             dailyGoal: task ? task.dailyGoal : '',
-            timestamp: Date.now()
+            project: task ? task.project : 'Manual', 
+            timestamp: Date.now() 
         };
 
         const updatedRecord = {
             ...existingRecord,
             minutes: existingRecord.minutes + minutesToAdd,
-            timestamp: Date.now()
+            timestamp: Date.now() 
         };
 
-        const newHistory = {
-            ...safeHistory,
-            [targetDate]: {
+        const newHistory = { 
+            ...safeHistory, 
+            [today]: {
                 ...dayRecords,
-                [recordId]: updatedRecord
+                [taskId]: updatedRecord
             }
         };
 
@@ -1071,6 +1077,7 @@ export default function JumpStart() {
         setHistory(newHistory);
         saveDataToCloud(newTasks, newHistory);
     };
+
 
     const handleManualRecord = (id, seconds) => {
         saveSession(id, seconds, manualRecordDate);
@@ -1082,7 +1089,6 @@ export default function JumpStart() {
         const date = didDate || getTodayString();
         const existingTask = tasks.find(t => t.title === title);
         
-        // 1. Update Lifetime stats if matching task found
         let newTasks = tasks;
         if (existingTask) {
             newTasks = tasks.map(t => {
@@ -1096,17 +1102,23 @@ export default function JumpStart() {
         }
 
         const safeHistory = history || {};
-        const dayRecords = safeHistory[date] || {}; 
+        let dayRecords = safeHistory[date] || {}; 
         
+        // [MODIFIED] Auto-migration: Check if Array, convert to Object
+        if (Array.isArray(dayRecords)) {
+            const recordsMap = {};
+            dayRecords.forEach(rec => {
+                if(rec.taskId) recordsMap[rec.taskId] = rec;
+            });
+            dayRecords = recordsMap;
+        }
+
         const taskId = existingTask ? existingTask.id : `adhoc-${title.replace(/\s+/g, '-').toLowerCase()}`;
 
-        // 2. Create/Update History Record with Project Context
         const existingRecord = dayRecords[taskId] || {
             title: title,
             minutes: 0,
             dailyGoal: 'Ad-hoc Log',
-            // Priority: Existing Task Project > Context Project > Default 'Manual'
-            // [MODIFIED]: Added project context here
             project: existingTask ? existingTask.project : (contextProject || 'Manual'),
             color: existingTask ? existingTask.color : 'bg-amber-500',
             timestamp: Date.now()
