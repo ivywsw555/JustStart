@@ -825,107 +825,114 @@ export default function JumpStart() {
         );
     };
 
-    const ProjectJournalModal = ({ project, tasks, history, onClose, onUpdateHistory, onAddEntry }) => {
-    const taskIds = tasks.map(t => t.id);
-    
-    // Group history by date for this project
-    const projectHistory = Object.entries(history).reduce((acc, [date, dayRecords]) => {
-        // Filter logic updated: Include records if they match task IDs OR if they have the correct 'project' tag
-        const relevantRecords = Object.values(dayRecords).filter(r => 
-            taskIds.includes(r.taskId) || (r.project === project)
-        );
-        if (relevantRecords.length > 0) {
-            acc[date] = relevantRecords;
-        }
-        return acc;
-    }, {});
+   const ProjectJournalModal = ({ project, tasks, history, onClose, onUpdateHistory, onAddEntry }) => {
+        const taskIds = tasks.map(t => t.id);
+        
+        // Group history by date for this project
+        const projectHistory = Object.entries(history).reduce((acc, [date, dayRecords]) => {
+            // [MODIFIED] Use Object.entries to access Key (taskId)
+            // Convert dayRecords (Map of objects) to array of records with injected 'taskId'
+            const relevantRecords = Object.entries(dayRecords)
+                .map(([tId, rec]) => ({ ...rec, taskId: tId })) // Inject taskId back from key
+                .filter(r => {
+                    // Check if this record belongs to one of the project's tasks (by ID)
+                    // OR if it was explicitly logged under this project name (Ad-hoc)
+                    const isTaskMatch = taskIds.some(id => String(id) === String(r.taskId));
+                    const isProjectMatch = r.project === project;
+                    return isTaskMatch || isProjectMatch;
+                });
 
-    const sortedDates = Object.keys(projectHistory).sort((a, b) => new Date(b) - new Date(a));
+            if (relevantRecords.length > 0) {
+                acc[date] = relevantRecords;
+            }
+            return acc;
+        }, {});
 
-    return (
-        <div className="fixed inset-0 z-[70] bg-white flex flex-col animate-slide-in-right">
-            {/* Header */}
-            <div className="px-4 pt-12 pb-4 border-b border-gray-100 flex items-center justify-between bg-white/90 backdrop-blur-md sticky top-0 z-10">
-                <div className="flex items-center gap-3">
-                    <button onClick={onClose} className="p-2 -ml-2 hover:bg-gray-50 rounded-full text-gray-600"><ArrowLeft size={24}/></button>
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-900 leading-none">{project}</h2>
-                        <p className="text-xs text-indigo-500 font-medium mt-1">项目日志 & 复盘</p>
+        const sortedDates = Object.keys(projectHistory).sort((a, b) => new Date(b) - new Date(a));
+
+        return (
+            <div className="fixed inset-0 z-[70] bg-white flex flex-col animate-slide-in-right">
+                {/* Header */}
+                <div className="px-4 pt-12 pb-4 border-b border-gray-100 flex items-center justify-between bg-white/90 backdrop-blur-md sticky top-0 z-10">
+                    <div className="flex items-center gap-3">
+                        <button onClick={onClose} className="p-2 -ml-2 hover:bg-gray-50 rounded-full text-gray-600"><ArrowLeft size={24}/></button>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900 leading-none">{project}</h2>
+                            <p className="text-xs text-indigo-500 font-medium mt-1">项目日志 & 复盘</p>
+                        </div>
                     </div>
+                    {/* 'Add Entry' Button in Header */}
+                    <button 
+                        onClick={onAddEntry}
+                        className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
+                        title="补录记录"
+                    >
+                        <Plus size={20} />
+                    </button>
                 </div>
-                {/* 'Add Entry' Button in Header */}
-                <button 
-                    onClick={onAddEntry}
-                    className="p-2 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"
-                    title="补录记录"
-                >
-                    <Plus size={20} />
-                </button>
-            </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
-                {sortedDates.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
-                        <BookOpen size={48} className="opacity-20" />
-                        <p className="text-sm">暂无历史记录，开始行动吧！</p>
-                    </div>
-                ) : (
-                    <div className="space-y-8 pb-20">
-                        {sortedDates.map(date => (
-                            <div key={date} className="relative pl-4 border-l-2 border-indigo-200">
-                                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4 border-indigo-200"></div>
-                                <h3 className="text-sm font-bold text-indigo-900 mb-4 bg-indigo-50 inline-block px-2 py-1 rounded-md">{date}</h3>
-                                
-                                <div className="space-y-4">
-                                    {projectHistory[date].map(record => (
-                                        <div key={record.taskId} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div>
-                                                    <h4 className="font-bold text-gray-800 text-base">{record.title}</h4>
-                                                    <div className="flex flex-wrap gap-2 mt-2">
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-indigo-50 text-indigo-700">
-                                                            <Clock size={10} className="mr-1"/> {Math.round(record.minutes)}m
-                                                        </span>
-                                                        {record.dailyGoal && (
-                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
-                                                                🎯 {record.dailyGoal}
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-50">
+                    {sortedDates.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
+                            <BookOpen size={48} className="opacity-20" />
+                            <p className="text-sm">暂无历史记录，开始行动吧！</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-8 pb-20">
+                            {sortedDates.map(date => (
+                                <div key={date} className="relative pl-4 border-l-2 border-indigo-200">
+                                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4 border-indigo-200"></div>
+                                    <h3 className="text-sm font-bold text-indigo-900 mb-4 bg-indigo-50 inline-block px-2 py-1 rounded-md">{date}</h3>
+                                    
+                                    <div className="space-y-4">
+                                        {projectHistory[date].map(record => (
+                                            <div key={record.taskId} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div>
+                                                        <h4 className="font-bold text-gray-800 text-base">{record.title}</h4>
+                                                        <div className="flex flex-wrap gap-2 mt-2">
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-bold bg-indigo-50 text-indigo-700">
+                                                                <Clock size={10} className="mr-1"/> {Math.round(record.minutes)}m
                                                             </span>
-                                                        )}
+                                                            {record.dailyGoal && (
+                                                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
+                                                                    🎯 {record.dailyGoal}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            
-                                            {/* Journal Input Area */}
-                                            <div className="relative group">
-                                                <div className="absolute top-3 left-3 text-gray-300 pointer-events-none">
-                                                    <Pencil size={14} />
+                                                
+                                                {/* Journal Input Area */}
+                                                <div className="relative group">
+                                                    <div className="absolute top-3 left-3 text-gray-300 pointer-events-none">
+                                                        <Pencil size={14} />
+                                                    </div>
+                                                    <textarea 
+                                                        className="w-full bg-gray-50 hover:bg-white focus:bg-white text-sm text-gray-700 rounded-xl p-3 pl-9 outline-none border border-transparent focus:border-indigo-200 transition-all resize-none placeholder-gray-400"
+                                                        rows={2}
+                                                        placeholder="记录实际完成情况或心得..."
+                                                        defaultValue={record.journal || ''}
+                                                        onBlur={(e) => {
+                                                            const newVal = e.target.value;
+                                                            if (newVal !== record.journal) {
+                                                                onUpdateHistory(date, record.taskId, { journal: newVal });
+                                                            }
+                                                        }}
+                                                    />
                                                 </div>
-                                                <textarea 
-                                                    className="w-full bg-gray-50 hover:bg-white focus:bg-white text-sm text-gray-700 rounded-xl p-3 pl-9 outline-none border border-transparent focus:border-indigo-200 transition-all resize-none placeholder-gray-400"
-                                                    rows={2}
-                                                    placeholder="记录实际完成情况或心得..."
-                                                    defaultValue={record.journal || ''}
-                                                    onBlur={(e) => {
-                                                        const newVal = e.target.value;
-                                                        if (newVal !== record.journal) {
-                                                            onUpdateHistory(date, record.taskId, { journal: newVal });
-                                                        }
-                                                    }}
-                                                />
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
-        </div>
-    );
-}
-
+        );
+    }
 
 
     const SwipeableTaskItem = ({ task, onClick, onDelete, onEdit, hideTitle, onManualRecord, todayMinutes }) => {
