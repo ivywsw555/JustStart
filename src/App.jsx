@@ -733,55 +733,58 @@ export default function JumpStart() {
         setIsAddingTask(false);
     };
 
-    const AdHocLogModal = ({ onClose, onSave }) => {
-    const [title, setTitle] = useState('');
-    const [minutes, setMinutes] = useState('');
-    // Added date selection state
-    const [didDate, setDidDate] = useState(() => {
-        return new Date().toISOString().split('T')[0];
-    });
+    const AdHocLogModal = ({ onClose, onSave, defaultProject }) => {
+        const [title, setTitle] = useState('');
+        const [minutes, setMinutes] = useState('');
+        // [FIX] Use local time string to prevent "Yesterday" bug
+        const [didDate, setDidDate] = useState(() => {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        });
 
-    const handleSave = () => {
-        const mins = parseInt(minutes);
-        if (title.trim() && mins && mins !== 0) { 
-            onSave(title, mins * 60, didDate); // Pass date to save function
-            onClose(); 
-        }
-    };
-    // Increased z-index to z-[80] to appear above ProjectJournalModal (z-[70])
-    return (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
-                <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <ClipboardList size={24} />
+        const handleSave = () => {
+            const mins = parseInt(minutes);
+            if (title.trim() && mins && mins !== 0) { 
+                onSave(title, mins * 60, didDate, defaultProject); // Pass project context
+                onClose(); 
+            }
+        };
+        
+        return (
+            <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+                <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6" onClick={(e) => e.stopPropagation()}>
+                    <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <ClipboardList size={24} />
+                    </div>
+                    {/* [MODIFIED] Visually confirm which project we are logging to */}
+                    <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">
+                        {defaultProject ? `补录到: ${defaultProject}` : "补录任意活动"}
+                    </h3>
+                    <p className="text-gray-500 text-sm mb-6 text-center">做了列表里没有的事情？或者需要修正时间？</p>
+                    <div className="space-y-4 mb-6">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">做了什么?</label>
+                            <input autoFocus type="text" placeholder="例如: 帮同事Debug, 读了会书..." value={title} onChange={(e) => setTitle(e.target.value)} className="w-full text-lg font-medium border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">多久? (分钟, 可负数)</label>
+                            <input type="number" placeholder="0" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-full text-lg font-mono font-bold text-gray-900 border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">哪一天?</label>
+                            <input 
+                                type="date" 
+                                value={didDate} 
+                                onChange={(e) => setDidDate(e.target.value)} 
+                                className="w-full text-sm font-medium border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent" 
+                            />
+                        </div>
+                    </div>
+                    <div className="flex gap-3"><button onClick={onClose} className="flex-1 py-3 text-gray-500 font-medium hover:bg-gray-50 rounded-xl transition-colors">取消</button><button onClick={handleSave} className="flex-1 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">确认记录</button></div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">补录任意活动</h3>
-                <p className="text-gray-500 text-sm mb-6 text-center">做了列表里没有的事情？或者需要修正时间？</p>
-                <div className="space-y-4 mb-6">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">做了什么?</label>
-                        <input autoFocus type="text" placeholder="例如: 帮同事Debug, 读了会书..." value={title} onChange={(e) => setTitle(e.target.value)} className="w-full text-lg font-medium border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">多久? (分钟, 可负数)</label>
-                        <input type="number" placeholder="0" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="w-full text-lg font-mono font-bold text-gray-900 border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent" />
-                    </div>
-                    {/* Date Picker Input */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">哪一天?</label>
-                        <input 
-                            type="date" 
-                            value={didDate} 
-                            onChange={(e) => setDidDate(e.target.value)} 
-                            className="w-full text-sm font-medium border-b-2 border-gray-200 focus:border-amber-500 outline-none py-2 bg-transparent" 
-                        />
-                    </div>
-                </div>
-                <div className="flex gap-3"><button onClick={onClose} className="flex-1 py-3 text-gray-500 font-medium hover:bg-gray-50 rounded-xl transition-colors">取消</button><button onClick={handleSave} className="flex-1 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-colors">确认记录</button></div>
             </div>
-        </div>
-    );
-};
+        );
+    };
 
 
     const ManualRecordModal = ({ task, onClose, onSave }) => {
@@ -1084,7 +1087,7 @@ export default function JumpStart() {
         setManualRecordDate(null);
     };
 
-        const handleAdHocLog = (title, seconds, didDate, contextProject) => {
+    const handleAdHocLog = (title, seconds, didDate, contextProject) => {
         const minutesToAdd = seconds / 60;
         const date = didDate || getTodayString();
         const existingTask = tasks.find(t => t.title === title);
@@ -1127,11 +1130,13 @@ export default function JumpStart() {
         
         // Determine the project to save. 
         // Logic: 
-        // 1. If it's an existing task, use its project (to keep consistency).
-        // 2. If a specific contextProject was passed (from "Add Entry" in journal), use that.
+        // 1. If a specific contextProject was passed (from "Add Entry" in journal), use that.
+        // 2. If it's an existing task, use its project (to keep consistency).
         // 3. If the record already had a project, keep it.
         // 4. Default to 'Manual'.
-        const targetProject = existingTask ? existingTask.project : (contextProject || existingRecord.project || 'Manual');
+        
+        // [FIXED] Priority changed: contextProject first!
+        const targetProject = contextProject || (existingTask ? existingTask.project : (existingRecord.project || 'Manual'));
 
         const updatedRecord = {
             ...existingRecord,
